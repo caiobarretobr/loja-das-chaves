@@ -1,0 +1,11 @@
+.vercel
+node_modules
+dist
+.barbergscheck
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+*-firebase-adminsdk-*.json

@@ -1,0 +1,19 @@
+{
+  "name": "Barber GS - Agendamento Online",
+  "short_name": "Barber GS",
+  "description": "Agendamento online da barbearia Barber GS.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "gcm_sender_id": "103953800507",
+  "icons": [
+    {
+      "src": "/favicon.jpeg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

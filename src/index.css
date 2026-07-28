@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Manrope:wght@400;500;700;800&display=swap');
+
+:root {
+  color: #111111;
+  background: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  position: relative;
+}
+
+.hero-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fff7d6 100%);
+}
+
+.phone-first-shell {
+  padding: clamp(20px, 4vw, 36px);
+}
+
+.phone-feature-card {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.hero-highlight {
+  min-height: 100%;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(32, 26, 24, 0.97), rgba(55, 38, 28, 0.96)),
+    radial-gradient(circle at top, rgba(156, 91, 46, 0.28), transparent 42%);
+  color: #fef7ef;
+}
+
+.hero-highlight .MuiPaper-root {
+  background: rgba(255, 250, 242, 0.08);
+  color: inherit;
+  border-color: rgba(255, 250, 242, 0.12);
+  box-shadow: none;
+}
+
+.service-preview-card {
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.booking-panel {
+  overflow: hidden;
+}
+
+.choice-card,
+.plan-table {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.mobile-submit-bar {
+  position: sticky;
+  bottom: 10px;
+  z-index: 2;
+  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.96) 34%);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-panel,
+.service-preview-card {
+  animation: rise-in 420ms ease both;
+}
+
+@media (max-width: 899px) {
+  .phone-first-shell {
+    padding: 20px;
+  }
+
+  .hero-highlight {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .mobile-submit-bar {
+    bottom: 6px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}

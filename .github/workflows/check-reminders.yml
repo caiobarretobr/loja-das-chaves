@@ -1,0 +1,19 @@
+name: Check haircut reminders
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger production reminder check
+        run: |
+          curl --fail --show-error --silent \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "x-barbergs-check-secret: ${{ secrets.BARBERGS_CHECK_SECRET }}" \
+            --data "{}" \
+            "${{ secrets.BARBERGS_BASE_URL }}/api/reminders/check"

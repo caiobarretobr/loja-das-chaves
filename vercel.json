@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/agendamentos/:id",
+      "destination": "/api/agendamentos?id=:id"
+    },
+    {
+      "source": "/api/bloqueios/:id",
+      "destination": "/api/bloqueios?id=:id"
+    },
+    {
+      "source": "/api/planos/:id",
+      "destination": "/api/planos?id=:id"
+    },
+    {
+      "source": "/api/relatorios/:month",
+      "destination": "/api/relatorios?month=:month"
+    }
+  ]
+}
