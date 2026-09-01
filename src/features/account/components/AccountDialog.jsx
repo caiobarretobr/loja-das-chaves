@@ -11,6 +11,7 @@ import {
   Divider,
   Grid,
   IconButton,
+  MenuItem,
   Paper,
   Stack,
   Tab,
@@ -21,11 +22,13 @@ import {
   useTheme,
 } from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import EditCalendarRoundedIcon from '@mui/icons-material/EditCalendarRounded';
 import GoogleIcon from '@mui/icons-material/Google';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
-import { formatPhone, isValidPhone } from '../../shared/utils/formatters';
+import { formatFullDate, formatPhone, isValidPhone } from '../../shared/utils/formatters';
+import { updateClientPlanAttendances } from '../services/accountApi';
 
 const initialLoginForm = {
   email: '',
@@ -76,7 +79,29 @@ function validateLogin(form) {
   return '';
 }
 
-function AccountDialog({ account, open, onClose }) {
+function isEconomicPlan(optionId = '') {
+  return optionId.startsWith('economico-');
+}
+
+function isEconomicAllowedDate(date = '') {
+  const parsed = new Date(`${date}T00:00:00-03:00`);
+  return !Number.isNaN(parsed.getTime()) && [1, 2, 3].includes(parsed.getDay());
+}
+
+function isFutureAttendance(item = {}) {
+  const parsed = new Date(`${item.date}T${item.time}:00-03:00`);
+  return !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now();
+}
+
+function isPlanActive(plan = {}) {
+  const expiresAt = plan.expiraEm ? new Date(`${plan.expiraEm}T23:59:59-03:00`) : null;
+  return (
+    (plan.status || 'ativo') === 'ativo' &&
+    (!expiresAt || expiresAt.getTime() > Date.now())
+  );
+}
+
+function AccountDialog({ account, availability, open, onClose, onDataChanged }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const [mode, setMode] = useState('login');
@@ -85,6 +110,7 @@ function AccountDialog({ account, open, onClose }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingAttendance, setEditingAttendance] = useState(null);
 
   function updateLoginField(field, value) {
     setLoginForm((current) => ({ ...current, [field]: value }));
@@ -183,6 +209,68 @@ function AccountDialog({ account, open, onClose }) {
     runAction(account.logout, 'Conta desconectada.');
   }
 
+  function startEditingAttendance(plan, item) {
+    setEditingAttendance({
+      planId: plan.id,
+      itemId: item.id,
+      originalDate: item.date,
+      originalTime: item.time,
+      date: item.date,
+      time: item.time,
+    });
+    setError('');
+    setMessage('');
+  }
+
+  function updateEditingAttendance(field, value) {
+    setEditingAttendance((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === 'date' ? { time: '' } : {}),
+    }));
+    setError('');
+    setMessage('');
+  }
+
+  async function saveEditedAttendance() {
+    if (!editingAttendance?.planId || !editingAttendance?.itemId) {
+      return;
+    }
+
+    if (!editingAttendance.date || !editingAttendance.time) {
+      setError('Escolha a nova data e o novo horário.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const idToken = await account.getIdToken();
+      const data = await updateClientPlanAttendances(
+        editingAttendance.planId,
+        {
+          atendimentos: [{
+            id: editingAttendance.itemId,
+            date: editingAttendance.date,
+            time: editingAttendance.time,
+          }],
+        },
+        idToken,
+      );
+
+      setMessage(data.message || 'Datas do plano atualizadas com sucesso.');
+      setEditingAttendance(null);
+      await account.refreshProfile();
+      await onDataChanged?.();
+    } catch (saveError) {
+      setError(saveError.message || 'Não foi possível atualizar as datas do plano.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const profile = account.profile;
 
   return (
@@ -251,16 +339,141 @@ function AccountDialog({ account, open, onClose }) {
                 {account.plans.length > 0 ? (
                   <Stack spacing={1}>
                     <Typography fontWeight={800}>Seus planos ativos</Typography>
-                    {account.plans.map((plan) => (
-                      <Paper key={plan.id} variant="outlined" sx={{ p: 1.5 }}>
-                        <Typography fontWeight={800}>
-                          {plan.plano} - {plan.servico}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {plan.checklist.filter((item) => item.date).length} de {plan.limite} datas escolhidas
-                        </Typography>
-                      </Paper>
-                    ))}
+                    {account.plans.map((plan) => {
+                      const availableDates = (availability?.dates || []).filter((item) =>
+                        isEconomicPlan(plan.planoOpcao)
+                          ? isEconomicAllowedDate(item.date) && item.status !== 'blocked'
+                          : item.status !== 'blocked',
+                      );
+
+                      return (
+                        <Paper key={plan.id} variant="outlined" sx={{ p: 1.5 }}>
+                          <Stack spacing={1.2}>
+                            <Box>
+                              <Typography fontWeight={800}>
+                                {plan.plano} - {plan.servico}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {plan.checklist.filter((item) => item.date).length} de {plan.limite} datas escolhidas
+                              </Typography>
+                            </Box>
+
+                            {plan.checklist.map((item) => {
+                              const isEditing = (
+                                editingAttendance?.planId === plan.id &&
+                                editingAttendance?.itemId === item.id
+                              );
+                              const canEdit = (
+                                isPlanActive(plan) &&
+                                item.date &&
+                                item.time &&
+                                !item.done &&
+                                isFutureAttendance(item)
+                              );
+                              const slots = (availability?.slotsByDate?.[editingAttendance?.date] || [])
+                                .filter((slot) =>
+                                  slot.available ||
+                                  (
+                                    editingAttendance?.originalDate === editingAttendance?.date &&
+                                    editingAttendance?.originalTime === slot.time
+                                  ),
+                                );
+
+                              return (
+                                <Paper key={item.id} variant="outlined" sx={{ p: 1.2, bgcolor: 'rgba(32, 26, 24, 0.02)' }}>
+                                  <Stack spacing={1}>
+                                    <Stack
+                                      direction={{ xs: 'column', sm: 'row' }}
+                                      justifyContent="space-between"
+                                      spacing={1}
+                                    >
+                                      <Box>
+                                        <Typography fontWeight={700}>{item.label}</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                          {item.date ? formatFullDate(item.date) : 'Data pendente'} às {item.time || '-'}
+                                        </Typography>
+                                        {item.done ? (
+                                          <Typography variant="caption" color="success.main">
+                                            Atendimento concluído
+                                          </Typography>
+                                        ) : null}
+                                      </Box>
+                                      {canEdit && !isEditing ? (
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          startIcon={<EditCalendarRoundedIcon />}
+                                          disabled={submitting}
+                                          onClick={() => startEditingAttendance(plan, item)}
+                                        >
+                                          Editar
+                                        </Button>
+                                      ) : null}
+                                    </Stack>
+
+                                    {isEditing ? (
+                                      <Grid container spacing={1}>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                          <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            label="Nova data"
+                                            value={editingAttendance.date}
+                                            onChange={(event) => updateEditingAttendance('date', event.target.value)}
+                                          >
+                                            {availableDates.map((dateItem) => (
+                                              <MenuItem key={dateItem.date} value={dateItem.date}>
+                                                {formatFullDate(dateItem.date)}
+                                              </MenuItem>
+                                            ))}
+                                          </TextField>
+                                        </Grid>
+                                        <Grid size={{ xs: 12, sm: 6 }}>
+                                          <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            label="Novo horário"
+                                            value={editingAttendance.time}
+                                            onChange={(event) => updateEditingAttendance('time', event.target.value)}
+                                          >
+                                            {slots.map((slot) => (
+                                              <MenuItem key={slot.time} value={slot.time}>
+                                                {slot.time}
+                                              </MenuItem>
+                                            ))}
+                                          </TextField>
+                                        </Grid>
+                                        <Grid size={{ xs: 12 }}>
+                                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                            <Button
+                                              variant="contained"
+                                              startIcon={<SaveRoundedIcon />}
+                                              disabled={submitting}
+                                              onClick={saveEditedAttendance}
+                                            >
+                                              Salvar nova data
+                                            </Button>
+                                            <Button
+                                              variant="outlined"
+                                              disabled={submitting}
+                                              onClick={() => setEditingAttendance(null)}
+                                            >
+                                              Cancelar
+                                            </Button>
+                                          </Stack>
+                                        </Grid>
+                                      </Grid>
+                                    ) : null}
+                                  </Stack>
+                                </Paper>
+                              );
+                            })}
+                          </Stack>
+                        </Paper>
+                      );
+                    })}
                   </Stack>
                 ) : (
                   <Typography color="text.secondary">

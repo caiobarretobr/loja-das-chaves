@@ -51,6 +51,8 @@ function getPushRegistrationError(error) {
   return details || 'Não foi possível ativar notificações.';
 }
 
+const SERVICE_WORKER_VERSION = '2026-07-29-01';
+
 async function getCleanServiceWorkerRegistration() {
   const registrations = await navigator.serviceWorker.getRegistrations();
 
@@ -60,12 +62,17 @@ async function getCleanServiceWorkerRegistration() {
       .map((registration) => registration.unregister()),
   );
 
-  const registration = await navigator.serviceWorker.register('/sw.js', {
+  const registration = await navigator.serviceWorker.register(`/sw.js?v=${SERVICE_WORKER_VERSION}`, {
     scope: '/',
     updateViaCache: 'none',
   });
 
   await registration.update().catch(() => {});
+
+  if (registration.waiting) {
+    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+
   return navigator.serviceWorker.ready;
 }
 

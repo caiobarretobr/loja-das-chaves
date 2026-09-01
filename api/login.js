@@ -1,5 +1,5 @@
-import { createSessionToken, verifyPassword } from './_lib/auth.js';
-import { methodNotAllowed, sendJson } from './_lib/response.js';
+import { createSessionToken, verifyPassword } from '../server/lib/auth.js';
+import { methodNotAllowed, sendJson } from '../server/lib/response.js';
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {

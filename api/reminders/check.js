@@ -1,19 +1,29 @@
 import { timingSafeEqual } from 'node:crypto';
 import {
   listAppointments,
+  listCanceledServices,
   listClientSubscriptions,
+  listClientWhatsAppNotifications,
   listPlans,
+  createCanceledService,
+  deleteAppointment,
   updateAppointmentReminderSent,
   updateClientReminderSent,
+  updateClientWhatsAppNotificationStatus,
   updatePlanAttendanceReminderSent,
-} from '../_lib/firestore.js';
-import { notifyClientDevice } from '../_lib/push.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
-import { sendBarberReminderWhatsAppNotification } from '../_lib/whatsapp.js';
+} from '../../server/lib/firestore.js';
+import { notifyClientDevice } from '../../server/lib/push.js';
+import { getCurrentReportMonthKey } from '../../server/lib/reports.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
+import {
+  sendBarberReminderWhatsAppNotification,
+  sendClientReminderWhatsAppNotification,
+} from '../../server/lib/whatsapp.js';
 
 const DEFAULT_REMINDER_MINUTES_MIN = 0;
 const DEFAULT_REMINDER_MINUTES_MAX = 65;
 const DEFAULT_BUSINESS_TIME_ZONE = 'America/Recife';
+const STALE_APPOINTMENT_AFTER_MS = 1000 * 60 * 60 * 24 * 7;
 
 function getCheckSecret() {
   return String(process.env.BARBERGS_CHECK_SECRET || '').trim();
@@ -173,11 +183,14 @@ function normalizeAppointments(appointments = [], subscriptionsByAppointmentId) 
       id: appointment.id,
       reminderKey: `appointment:${appointment.id}`,
       kind: 'appointment',
+      uid: appointment.uid,
+      telefone: appointment.telefone,
       nome: appointment.nome,
       servico: appointment.servico,
       data: appointment.data,
       horario: appointment.horario,
       reminderSentAt: appointment.lembreteEnviadoEm,
+      clienteLembreteCanal: appointment.clienteLembreteCanal,
       clientSubscriptionId: clientSubscription?.id || '',
       clientReminderSentAt: clientSubscription?.lembreteEnviadoEm || '',
     };
@@ -198,11 +211,14 @@ function normalizePlanAttendances(plans = [], subscriptionsByAppointmentId) {
           kind: 'plan-attendance',
           planId: plan.id,
           attendanceId: item.id,
+          uid: plan.uid,
+          telefone: plan.telefone,
           nome: plan.nome,
           servico: `${plan.plano} - ${plan.servico}`,
           data: item.date,
           horario: item.time,
           reminderSentAt: item.reminderSentAt || '',
+          clienteLembreteCanal: item.clienteLembreteCanal || '',
           clientSubscriptionId: clientSubscription?.id || '',
           clientReminderSentAt: clientSubscription?.lembreteEnviadoEm || '',
         };
@@ -228,23 +244,118 @@ function normalizeLegacyClientSubscriptions(subscriptions = [], knownScheduleIds
 }
 
 function buildClientReminderMessage(item) {
-  return `Corte agendado para daqui a 1 hora ou menos! O atendimento foi marcado para ${item.horario}, lembre-se de chegar na barbearia 5 minutos antes.`;
+  return `Seu atendimento na Loja das Chaves será às ${item.horario}. Lembre-se de chegar 5 minutos antes.`;
 }
 
-async function markScheduleReminderSent(item, reminderSentAt) {
+async function markScheduleReminderSent(item, reminderSentAt, metadata = {}) {
   if (item.kind === 'appointment') {
-    await updateAppointmentReminderSent(item.id, reminderSentAt);
+    await updateAppointmentReminderSent(item.id, reminderSentAt, metadata);
     return;
   }
 
   if (item.kind === 'plan-attendance') {
-    await updatePlanAttendanceReminderSent(item.planId, item.attendanceId, reminderSentAt);
+    await updatePlanAttendanceReminderSent(item.planId, item.attendanceId, reminderSentAt, metadata);
     return;
   }
 
   if (item.kind === 'client-subscription') {
     await updateClientReminderSent(item.clientSubscriptionId);
   }
+}
+
+function getEnabledWhatsAppRecord(item, recordsByUid, records) {
+  if (item.uid && recordsByUid.has(item.uid)) {
+    return recordsByUid.get(item.uid);
+  }
+
+  if (!item.telefone) {
+    return null;
+  }
+
+  const phone = String(item.telefone || '').replace(/\D/g, '');
+  const matches = records.filter((record) => {
+    const recordPhone = String(record.phone || '').replace(/\D/g, '');
+    return recordPhone === phone || recordPhone.endsWith(phone) || phone.endsWith(recordPhone);
+  });
+
+  return matches.length === 1 ? matches[0] : null;
+}
+
+async function notifyClient(schedule, whatsappRecord) {
+  if (whatsappRecord?.enabled && whatsappRecord.phone && whatsappRecord.apikey) {
+    try {
+      const delivery = await sendClientReminderWhatsAppNotification(schedule, whatsappRecord);
+      await updateClientWhatsAppNotificationStatus(whatsappRecord.uid, {
+        ultimoEnvioEm: new Date().toISOString(),
+        ultimoErro: '',
+      });
+      return {
+        channel: 'whatsapp',
+        sent: delivery.sent ? 1 : 0,
+        skipped: !delivery.sent,
+        reason: delivery.sent ? '' : 'client-whatsapp-not-sent',
+      };
+    } catch (error) {
+      await updateClientWhatsAppNotificationStatus(whatsappRecord.uid, {
+        ultimoErro: 'client-whatsapp-failed',
+      });
+      throw error;
+    }
+  }
+
+  const pushDelivery = await notifyClientIfAvailable(schedule);
+  return {
+    channel: pushDelivery.sent > 0 ? 'push' : 'none',
+    sent: pushDelivery.sent,
+    skipped: pushDelivery.skipped,
+    reason: pushDelivery.reason || (pushDelivery.skipped ? 'no-push-endpoint' : ''),
+  };
+}
+
+async function cleanupStaleAppointments(appointments = [], now = new Date()) {
+  const canceledServices = await listCanceledServices();
+  const alreadyCanceledIds = new Set(
+    canceledServices.flatMap((item) => [item.id, item.appointmentId]).filter(Boolean),
+  );
+  let canceled = 0;
+  let failed = 0;
+
+  for (const appointment of appointments) {
+    const scheduleDate = parseScheduleDate(appointment);
+
+    if (!scheduleDate || now.getTime() - scheduleDate.getTime() < STALE_APPOINTMENT_AFTER_MS) {
+      continue;
+    }
+
+    try {
+      if (!alreadyCanceledIds.has(appointment.id)) {
+        await createCanceledService({
+          id: appointment.id,
+          appointmentId: appointment.id,
+          nome: appointment.nome,
+          servico: appointment.servico,
+          data: appointment.data,
+          horario: appointment.horario,
+          preco: appointment.preco,
+          canceladoEm: now.toISOString(),
+          reportMonth: getCurrentReportMonthKey(now),
+          motivoCancelamento: 'auto-expired-after-7-days',
+        });
+        alreadyCanceledIds.add(appointment.id);
+      }
+
+      await deleteAppointment(appointment.id);
+      canceled += 1;
+    } catch (error) {
+      failed += 1;
+      console.error('Failed to auto-cancel stale appointment:', {
+        appointmentId: appointment.id,
+        message: error.message || 'unknown-error',
+      });
+    }
+  }
+
+  return { canceled, failed };
 }
 
 async function notifyClientIfAvailable(item) {
@@ -256,7 +367,7 @@ async function notifyClientIfAvailable(item) {
     };
   }
 
-  if (item.clientReminderSentAt) {
+  if (item.clientReminderSentAt && item.reminderSentAt) {
     return {
       sent: 0,
       skipped: true,
@@ -265,7 +376,7 @@ async function notifyClientIfAvailable(item) {
   }
 
   return notifyClientDevice(item.clientSubscriptionId, {
-    title: 'Barber GS',
+    title: 'Loja das Chaves',
     body: buildClientReminderMessage(item),
     tag: `lembrete-cliente-1h-${item.reminderKey}`,
     url: '/',
@@ -293,12 +404,18 @@ export default async function handler(request, response) {
     }
 
     const windowConfig = getReminderWindow();
-    const [appointments, plans, clientSubscriptions] = await Promise.all([
+    const [appointments, plans, clientSubscriptions, clientWhatsAppRecords] = await Promise.all([
       listAppointments(),
       listPlans(),
       listClientSubscriptions(),
+      listClientWhatsAppNotifications(),
     ]);
+    const cleanup = await cleanupStaleAppointments(appointments, now);
     const subscriptionsByAppointmentId = getClientSubscriptionByAppointmentId(clientSubscriptions);
+    const enabledWhatsAppRecords = clientWhatsAppRecords.filter((record) =>
+      record.enabled && record.status !== 'disabled' && record.phone && record.apikey,
+    );
+    const whatsappRecordsByUid = new Map(enabledWhatsAppRecords.map((record) => [record.uid, record]));
     const normalizedAppointments = normalizeAppointments(appointments, subscriptionsByAppointmentId);
     const normalizedPlanAttendances = normalizePlanAttendances(plans, subscriptionsByAppointmentId);
     const knownScheduleIds = new Set([
@@ -317,45 +434,63 @@ export default async function handler(request, response) {
     const dueSchedules = schedules.filter((item) => isInsideReminderWindow(item, now, windowConfig));
     const results = [];
     let barberWhatsAppSent = 0;
+    let clientWhatsAppSent = 0;
     let clientPushSent = 0;
     let skipped = 0;
-    let failed = 0;
+    let failed = cleanup.failed;
 
     for (const schedule of dueSchedules) {
       const result = {
         id: schedule.id,
         kind: schedule.kind,
         barberWhatsAppSent: false,
+        clientWhatsAppSent: 0,
         clientPushSent: 0,
         skipped: false,
       };
+      let clientChannel = 'none';
+      let clientError = '';
 
       try {
-        const whatsapp = await sendBarberReminderWhatsAppNotification(schedule);
+        const barberWhatsapp = await sendBarberReminderWhatsAppNotification(schedule);
         const reminderSentAt = new Date().toISOString();
 
-        if (whatsapp.sent) {
+        if (barberWhatsapp.sent) {
           barberWhatsAppSent += 1;
           result.barberWhatsAppSent = true;
         }
 
-        await markScheduleReminderSent(schedule, reminderSentAt);
-
         try {
-          const clientDelivery = await notifyClientIfAvailable(schedule);
+          const whatsappRecord = getEnabledWhatsAppRecord(
+            schedule,
+            whatsappRecordsByUid,
+            enabledWhatsAppRecords,
+          );
+          const clientDelivery = await notifyClient(schedule, whatsappRecord);
 
-          if (clientDelivery.sent > 0) {
+          clientChannel = clientDelivery.channel;
+
+          if (clientDelivery.channel === 'whatsapp' && clientDelivery.sent > 0) {
+            clientWhatsAppSent += 1;
+            result.clientWhatsAppSent = clientDelivery.sent;
+          } else if (clientDelivery.channel === 'push' && clientDelivery.sent > 0) {
             clientPushSent += 1;
             result.clientPushSent = clientDelivery.sent;
           } else {
             skipped += 1;
             result.skipped = true;
-            result.skipReason = clientDelivery.reason || (clientDelivery.skipped ? 'no-push-endpoint' : '');
+            result.skipReason = clientDelivery.reason || 'no-client-channel';
           }
-        } catch (pushError) {
+        } catch {
           failed += 1;
-          result.clientPushError = pushError.message || 'Falha ao enviar push do cliente.';
+          clientError = 'client-reminder-failed';
+          result.clientReminderError = 'Falha ao enviar lembrete do cliente.';
         }
+
+        await markScheduleReminderSent(schedule, reminderSentAt, {
+          clienteLembreteCanal: clientChannel,
+          ultimoErroLembrete: clientError,
+        });
       } catch (whatsappError) {
         failed += 1;
         result.error = whatsappError.message || 'Falha ao enviar WhatsApp do barbeiro.';
@@ -371,7 +506,9 @@ export default async function handler(request, response) {
       legacyClientSubscriptionsChecked: legacyClientSubscriptions.length,
       eligible: dueSchedules.length,
       barberWhatsAppSent,
+      clientWhatsAppSent,
       clientPushSent,
+      staleAppointmentsCanceled: cleanup.canceled,
       skipped,
       failed,
       reminderWindowMinutes: windowConfig,

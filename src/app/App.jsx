@@ -5,37 +5,23 @@ import {
   Button,
   Chip,
   Container,
+  Link,
   Paper,
   Stack,
-  Link,
   Typography,
 } from '@mui/material';
-import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
-import ContentCutRoundedIcon from '@mui/icons-material/ContentCutRounded';
-import InstagramIcon from '@mui/icons-material/Instagram';
-import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded';
-import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
-import { useTranslation } from 'react-i18next';
-import AccountDialog from '../features/account/components/AccountDialog';
-import { useClientAccount } from '../features/account/hooks/useClientAccount';
 import AdminPanel from '../features/admin/components/AdminPanel';
 import BookingForm from '../features/booking/components/BookingForm';
 import { useAvailability } from '../features/booking/hooks/useAvailability';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
+import LocationOnRoundedIcon from '@mui/icons-material/LocationOnRounded';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import logoUrl from '../../lojarafa.jpg';
 
 function App() {
-  const { t } = useTranslation();
   const [adminOpen, setAdminOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [bookingTab, setBookingTab] = useState('services');
-  const account = useClientAccount();
   const availability = useAvailability();
-
-  function chooseTab(tab) {
-    setBookingTab(tab);
-    window.setTimeout(() => {
-      document.querySelector('#agendamento')?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
-  }
 
   return (
     <Box className="app-shell">
@@ -47,141 +33,158 @@ function App() {
                 direction={{ xs: 'column', sm: 'row' }}
                 justifyContent="space-between"
                 alignItems={{ xs: 'flex-start', sm: 'center' }}
-                spacing={1}
+                spacing={1.2}
               >
-                <Chip color="secondary" label="Barber GS" />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} width={{ xs: '100%', sm: 'auto' }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<PersonRoundedIcon />}
-                    onClick={() => setAccountOpen(true)}
-                  >
-                    Conta do usuário
-                  </Button>
-                  <Button variant="outlined" color="secondary" onClick={() => setAdminOpen(true)}>
-                    {t('heroSecondaryAction')}
-                  </Button>
-                </Stack>
+                <Chip color="primary" icon={<KeyRoundedIcon />} label="Agenda online" />
+                <Button variant="outlined" color="primary" onClick={() => setAdminOpen(true)}>
+                  Painel administrativo
+                </Button>
               </Stack>
-              <Box
-                component="img"
-                src="/barbergs.jpeg"
-                alt="Barber GS"
-                sx={{
-                  width: '100%',
-                  maxHeight: { xs: 260, md: 360 },
-                  objectFit: 'contain',
-                  borderRadius: 2,
-                }}
-              />
-              <Typography color="text.secondary" maxWidth={680}>
-                Agende um horário ou escolha um plano mensal para ficar sempre na régua.
-              </Typography>
 
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
-                <Paper className="choice-card" sx={{ p: 2, flex: 1 }}>
-                  <Stack spacing={1.4}>
-                    <ContentCutRoundedIcon color="primary" />
-                    <Typography variant="h5">Serviços e Combos</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Corte, barba, sobrancelha, platinado, luzes e combos com preços fechados.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<ArrowDownwardRoundedIcon />}
-                      onClick={() => chooseTab('services')}
-                    >
-                      Escolher serviço
-                    </Button>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.4} alignItems="center">
+                <Box
+                  component="img"
+                  src={logoUrl}
+                  alt="Loja das Chaves"
+                  sx={{
+                    width: { xs: '100%', md: 280 },
+                    maxHeight: { xs: 260, md: 320 },
+                    objectFit: 'contain',
+                    borderRadius: 1,
+                    background: '#ffffff',
+                  }}
+                />
+                <Stack spacing={1.2} flex={1}>
+                  <Typography
+                    variant="h1"
+                    fontSize={{ xs: '2.25rem', md: '3.4rem' }}
+                    sx={{ color: 'primary.main', letterSpacing: '-0.04em' }}
+                  >
+                    Loja das Chaves
+                  </Typography>
+                  <Typography color="text.secondary" fontSize={{ xs: '1rem', md: '1.1rem' }}>
+                    Agende serviços de chaves, fechaduras, portões, amolação e produtos de carimbo em poucos passos.
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip label="Terça a quinta" />
+                    <Chip label="08:00 e 10:00" color="primary" />
+                    <Chip label="Notificação por WhatsApp" color="secondary" />
                   </Stack>
-                </Paper>
-
-                <Paper className="choice-card" sx={{ p: 2, flex: 1 }}>
-                  <Stack spacing={1.4}>
-                    <LocalOfferRoundedIcon color="primary" />
-                    <Box>
-                      <Typography variant="h5">Planos mensais</Typography>
-                      <Typography variant="body2" color="text.secondary" mt={0.5}>
-                        Cansado de pagar avulso e ficar sem horários? Escolha um plano e fique sempre na régua
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      startIcon={<ArrowDownwardRoundedIcon />}
-                      onClick={() => chooseTab('plans')}
-                    >
-                      Ver planos
-                    </Button>
-                  </Stack>
-                </Paper>
+                </Stack>
               </Stack>
             </Stack>
           </Paper>
 
           <Box id="agendamento">
             <BookingForm
-              key={bookingTab}
               availability={availability}
-              initialTab={bookingTab}
-              account={account}
-              onOpenAccount={() => setAccountOpen(true)}
               onSuccess={availability.refresh}
             />
           </Box>
 
           <Paper sx={{ p: { xs: 2, md: 3 } }}>
             <Stack spacing={1.4}>
-              <Typography variant="h5">{t('adminCardTitle')}</Typography>
-              <Typography color="text.secondary">{t('adminCardDescription')}</Typography>
-              <Button
-                fullWidth
-                variant="contained"
-                color="secondary"
-                onClick={() => setAdminOpen(true)}
-              >
-                {t('adminOpenButton')}
+              <Typography variant="h5">Administração da agenda</Typography>
+              <Typography color="text.secondary">
+                Acompanhe pedidos agendados, cancelados e finalizados com a senha da loja.
+              </Typography>
+              <Button fullWidth variant="contained" color="secondary" onClick={() => setAdminOpen(true)}>
+                Entrar no painel
               </Button>
               {availability.error ? (
-                <Alert severity="warning">{t('bookingAvailabilityError')}</Alert>
+                <Alert severity="warning">
+                  Não conseguimos atualizar a disponibilidade no momento. Recarregue a página para tentar novamente.
+                </Alert>
               ) : null}
             </Stack>
           </Paper>
 
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            justifyContent="center"
-            alignItems="center"
-            spacing={1}
-            sx={{ pb: 1 }}
-          >
-            <Stack direction="row" justifyContent="center" alignItems="center" spacing={1}>
-              <InstagramIcon color="primary" />
-              <Link
-                href="https://www.instagram.com/barbergs.gs/"
-                target="_blank"
-                rel="noopener noreferrer"
-                color="inherit"
-                underline="hover"
-                fontWeight={800}
+          <Paper component="footer" sx={{ p: { xs: 2, md: 3 } }}>
+            <Stack spacing={1.6}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <LocationOnRoundedIcon color="primary" />
+                <Link
+                  href="https://www.google.com/maps/search/?api=1&query=Av.%20Dr.%20Cl%C3%A1udio%20Jos%C3%A9%20Gueiros%20Leite%2C%203225%20-%20Janga%2C%20Paulista%20-%20PE%2C%2053437-000"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  color="inherit"
+                  underline="hover"
+                  fontWeight={800}
+                >
+                  Av. Dr. Cláudio José Gueiros Leite, 3225 - Janga, Paulista - PE, 53437-000
+                </Link>
+              </Stack>
+
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid rgba(12, 174, 179, 0.25)',
+                  background: 'linear-gradient(135deg, rgba(12,174,179,0.08), rgba(15,124,129,0.04))',
+                }}
               >
-                @barbergs.gs (página da barbearia)
-              </Link>
+                <Stack spacing={1.2}>
+                  <Stack spacing={0.3}>
+                    <Typography variant="subtitle1" fontWeight={800}>Vídeo da loja</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Assista ao vídeo institucional da Loja das Chaves.
+                    </Typography>
+                  </Stack>
+                  <Box
+                    component="video"
+                    src="/imagens/lojadaschaves.mp4"
+                    controls
+                    playsInline
+                    sx={{
+                      width: '100%',
+                      borderRadius: 2,
+                      background: '#000',
+                      maxHeight: 340,
+                    }}
+                  />
+                </Stack>
+              </Box>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} flexWrap="wrap" useFlexGap>
+                <Button
+                  variant="outlined"
+                  startIcon={<WhatsAppIcon />}
+                  href="https://api.whatsapp.com/send?phone=5581994623352"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Fale comigo pelo nosso WhatsApp
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<InstagramIcon />}
+                  href="https://www.instagram.com/lojadaschavesjangaoficial?igsi=dDAxcW11bGh5cGk1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Instagram da loja
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<InstagramIcon />}
+                  href="https://www.instagram.com/caio.websolutions?igsi=bjI4MjdqNWJ2cnBk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @caio.websolutions (Criador do app de agendamento)
+                </Button>
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+                Horário de funcionamento:
+                Segunda a Sexta: 9h às 12h | 13h às 18h
+                Sábado: 8h às 12h
+                Obs: Não abrimos aos Domingos.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Telefone: 81 9462-3352
+              </Typography>
             </Stack>
-            <Stack direction="row" justifyContent="center" alignItems="center" spacing={1}>
-              <InstagramIcon color="primary" />
-              <Link
-                href="https://www.instagram.com/caio.websolutions/"
-                target="_blank"
-                rel="noopener noreferrer"
-                color="inherit"
-                underline="hover"
-                fontWeight={800}
-              >
-                @caio.websolutions (Criador do site)
-              </Link>
-            </Stack>
-          </Stack>
+          </Paper>
         </Stack>
       </Container>
 
@@ -189,11 +192,7 @@ function App() {
         open={adminOpen}
         onClose={() => setAdminOpen(false)}
         onDataChanged={availability.refresh}
-      />
-      <AccountDialog
-        open={accountOpen}
-        account={account}
-        onClose={() => setAccountOpen(false)}
+        availability={availability}
       />
     </Box>
   );

@@ -1,5 +1,5 @@
-import { verifyAuthorizationHeader, verifyFirebaseAuthorizationHeader } from './_lib/auth.js';
-import { PLAN_OPTIONS } from './_lib/constants.js';
+import { verifyAuthorizationHeader, verifyFirebaseAuthorizationHeader } from '../server/lib/auth.js';
+import { PLAN_OPTIONS } from '../server/lib/constants.js';
 import {
   createPlan,
   deletePlan,
@@ -10,11 +10,15 @@ import {
   listPlans,
   updatePlan,
   upsertCompletedPlan,
-} from './_lib/firestore.js';
-import { getCurrentReportMonthKey } from './_lib/reports.js';
-import { methodNotAllowed, sendJson } from './_lib/response.js';
-import { normalizePhone, validatePlanPayload } from './_lib/validation.js';
-import { sendPlanDatesWhatsAppNotification } from './_lib/whatsapp.js';
+} from '../server/lib/firestore.js';
+import { getCurrentReportMonthKey } from '../server/lib/reports.js';
+import { methodNotAllowed, sendJson } from '../server/lib/response.js';
+import {
+  getAvailableTimeSlotsForDate,
+  normalizePhone,
+  validatePlanPayload,
+} from '../server/lib/validation.js';
+import { sendPlanDatesWhatsAppNotification } from '../server/lib/whatsapp.js';
 
 function addDays(date, days) {
   const nextDate = new Date(date);
@@ -60,6 +64,32 @@ function appendAttendancesToChecklist(checklist = [], attendances = []) {
 function getQueryValue(request, key) {
   const value = request.query?.[key];
   return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
+function parseScheduleDate(date = '', time = '') {
+  const parsed = new Date(`${date}T${time || '00:00'}:00-03:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isFutureSchedule(date = '', time = '') {
+  const parsed = parseScheduleDate(date, time);
+  return Boolean(parsed && parsed.getTime() > Date.now());
+}
+
+function isActivePlan(plan) {
+  return (
+    (plan.status || 'ativo') === 'ativo' &&
+    (!plan.expiraEm || new Date(`${plan.expiraEm}T23:59:59-03:00`).getTime() > Date.now())
+  );
+}
+
+function isEconomicPlan(optionId = '') {
+  return optionId.startsWith('economico-');
+}
+
+function isEconomicAllowedDate(date = '') {
+  const parsed = new Date(`${date}T00:00:00-03:00`);
+  return !Number.isNaN(parsed.getTime()) && [1, 2, 3].includes(parsed.getDay());
 }
 
 async function notifyBarber(appointment) {
@@ -317,6 +347,224 @@ async function createClientPlan(request, response) {
   }
 }
 
+async function updateClientPlanAttendances(request, response, id) {
+  if (!id) {
+    return sendJson(response, 400, {
+      message: 'Identificador do plano não informado.',
+    });
+  }
+
+  try {
+    const user = await verifyFirebaseAuthorizationHeader(request.headers.authorization || '');
+
+    if (!user) {
+      return sendJson(response, 401, {
+        message: 'Entre na sua conta para editar seu plano.',
+      });
+    }
+
+    const updates = Array.isArray(request.body?.atendimentos) ? request.body.atendimentos : [];
+
+    if (updates.length < 1) {
+      return sendJson(response, 400, {
+        message: 'Escolha ao menos uma data para atualizar.',
+      });
+    }
+
+    const [appointments, blockedPeriods, plans] = await Promise.all([
+      listAppointments(),
+      listBlockedPeriods(),
+      listPlans(),
+    ]);
+    const plan = plans.find((item) => item.id === id);
+
+    if (!plan || plan.uid !== user.uid) {
+      return sendJson(response, 404, {
+        message: 'Plano não encontrado.',
+      });
+    }
+
+    if (!isActivePlan(plan)) {
+      return sendJson(response, 409, {
+        message: 'Este plano não está ativo para edição.',
+      });
+    }
+
+    const updatesById = new Map();
+
+    for (const update of updates) {
+      const itemId = String(update?.id || '').trim();
+      const date = String(update?.date || '').trim();
+      const time = String(update?.time || '').trim();
+
+      if (!itemId || !date || !time) {
+        return sendJson(response, 400, {
+          message: 'Complete data e horário de cada atendimento escolhido.',
+        });
+      }
+
+      updatesById.set(itemId, { id: itemId, date, time });
+    }
+
+    const selectedSlots = new Set();
+
+    for (const update of updatesById.values()) {
+      const checklistItem = plan.checklist.find((item) => item.id === update.id);
+
+      if (
+        !checklistItem ||
+        checklistItem.done ||
+        !checklistItem.date ||
+        !checklistItem.time ||
+        !isFutureSchedule(checklistItem.date, checklistItem.time)
+      ) {
+        return sendJson(response, 409, {
+          message: 'Este atendimento do plano não pode ser editado.',
+        });
+      }
+
+      if (!isFutureSchedule(update.date, update.time)) {
+        return sendJson(response, 400, {
+          message: 'Escolha datas e horários futuros para o plano.',
+        });
+      }
+
+      if (!getAvailableTimeSlotsForDate(update.date).includes(update.time)) {
+        return sendJson(response, 400, {
+          message: 'Escolha horários válidos para todos os atendimentos do plano.',
+        });
+      }
+
+      if (isEconomicPlan(plan.planoOpcao) && !isEconomicAllowedDate(update.date)) {
+        return sendJson(response, 400, {
+          message: 'O Plano econômico só permite datas na segunda, terça ou quarta-feira.',
+        });
+      }
+
+      const start = new Date(`${plan.assinaturaEm}T00:00:00-03:00`);
+      const end = new Date(`${plan.expiraEm}T23:59:59-03:00`);
+      const selected = new Date(`${update.date}T00:00:00-03:00`);
+
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        selected < start ||
+        selected > end
+      ) {
+        return sendJson(response, 400, {
+          message: 'Escolha datas do plano dentro do período de 30 dias.',
+        });
+      }
+
+      const slotKey = `${update.date} ${update.time}`;
+
+      if (selectedSlots.has(slotKey)) {
+        return sendJson(response, 409, {
+          message: 'Escolha horários diferentes para cada atendimento do plano.',
+        });
+      }
+
+      selectedSlots.add(slotKey);
+    }
+
+    const editedItemIds = new Set(updatesById.keys());
+    const occupiedSlots = new Set([
+      ...appointments.map((appointment) => `${appointment.data} ${appointment.horario}`),
+      ...getPlanAttendances(plans)
+        .filter((attendance) =>
+          !attendance.done &&
+          !(attendance.planId === plan.id && editedItemIds.has(attendance.itemId)),
+        )
+        .map((attendance) => `${attendance.data} ${attendance.horario}`),
+    ]);
+    const blockedDates = new Set(
+      blockedPeriods.filter((item) => !item.time).map((item) => item.date),
+    );
+    const blockedSlots = new Set(
+      blockedPeriods.filter((item) => item.time).map((item) => `${item.date} ${item.time}`),
+    );
+
+    for (const update of updatesById.values()) {
+      const slotKey = `${update.date} ${update.time}`;
+
+      if (
+        occupiedSlots.has(slotKey) ||
+        blockedDates.has(update.date) ||
+        blockedSlots.has(slotKey)
+      ) {
+        return sendJson(response, 409, {
+          message: 'Um dos horários escolhidos acabou de ficar indisponível. Escolha outro horário.',
+        });
+      }
+    }
+
+    const now = new Date().toISOString();
+    const checklist = plan.checklist.map((item) => {
+      const update = updatesById.get(item.id);
+
+      if (!update) {
+        return item;
+      }
+
+      return {
+        ...item,
+        date: update.date,
+        time: update.time,
+        reminderSentAt: '',
+        clienteLembreteCanal: '',
+        ultimoErroLembrete: '',
+        editedAt: now,
+        editedBy: 'client',
+      };
+    });
+
+    await updatePlan(id, {
+      uid: plan.uid,
+      clientEmail: plan.clientEmail,
+      nome: plan.nome,
+      telefone: plan.telefone,
+      planoOpcao: plan.planoOpcao,
+      plano: plan.plano,
+      servico: plan.servico,
+      preco: plan.preco,
+      limite: plan.limite,
+      assinaturaEm: plan.assinaturaEm,
+      expiraEm: plan.expiraEm,
+      observacao: plan.observacao,
+      checklist: JSON.stringify(checklist),
+      status: plan.status || 'ativo',
+      criadoEm: plan.criadoEm,
+    });
+
+    const changedDates = checklist
+      .filter((item) => editedItemIds.has(item.id))
+      .map((item) => ({
+        label: item.label,
+        date: item.date,
+        time: item.time,
+      }));
+    const whatsapp = await notifyBarber({
+      id,
+      name: plan.nome,
+      plan: plan.plano.replace('Plano ', ''),
+      dates: changedDates,
+    });
+
+    return sendJson(response, 200, {
+      plan: publicClientPlan({
+        ...plan,
+        checklist,
+      }),
+      whatsapp,
+      message: 'Datas do plano atualizadas com sucesso.',
+    });
+  } catch (error) {
+    return sendJson(response, 500, {
+      message: error.message || 'Não foi possível atualizar as datas do plano.',
+    });
+  }
+}
+
 async function updateAdminPlan(request, response, id) {
   if (!id) {
     return sendJson(response, 400, {
@@ -332,7 +580,6 @@ async function updateAdminPlan(request, response, id) {
       });
     }
 
-    const itemId = String(request.body?.itemId || '').trim();
     const plans = await listPlans();
     const plan = plans.find((item) => item.id === id);
 
@@ -342,6 +589,126 @@ async function updateAdminPlan(request, response, id) {
       });
     }
 
+    if (request.body?.action === 'rescheduleAttendance') {
+      const itemId = String(request.body?.itemId || '').trim();
+      const newDate = String(request.body?.date || '').trim();
+      const newTime = String(request.body?.time || '').trim();
+
+      if (!itemId || !newDate || !newTime) {
+        return sendJson(response, 400, {
+          message: 'Escolha uma nova data e um novo horário.',
+        });
+      }
+
+      const checklistItem = plan.checklist.find((item) => item.id === itemId);
+
+      if (!checklistItem || checklistItem.done || !checklistItem.date || !checklistItem.time) {
+        return sendJson(response, 400, {
+          message: 'Este atendimento do plano não pode ser editado.',
+        });
+      }
+
+      if (!isFutureSchedule(newDate, newTime)) {
+        return sendJson(response, 400, {
+          message: 'Escolha datas e horários futuros para o plano.',
+        });
+      }
+
+      if (!getAvailableTimeSlotsForDate(newDate).includes(newTime)) {
+        return sendJson(response, 400, {
+          message: 'Escolha horários válidos para todos os atendimentos do plano.',
+        });
+      }
+
+      if (isEconomicPlan(plan.planoOpcao) && !isEconomicAllowedDate(newDate)) {
+        return sendJson(response, 400, {
+          message: 'O Plano econômico só permite datas na segunda, terça ou quarta-feira.',
+        });
+      }
+
+      const start = new Date(`${plan.assinaturaEm}T00:00:00-03:00`);
+      const end = new Date(`${plan.expiraEm}T23:59:59-03:00`);
+      const selected = new Date(`${newDate}T00:00:00-03:00`);
+
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        selected < start ||
+        selected > end
+      ) {
+        return sendJson(response, 400, {
+          message: 'Escolha datas do plano dentro do período de 30 dias.',
+        });
+      }
+
+      const [appointments, blockedPeriods] = await Promise.all([
+        listAppointments(),
+        listBlockedPeriods(),
+      ]);
+      const occupiedSlots = new Set([
+        ...appointments.map((appointment) => `${appointment.data} ${appointment.horario}`),
+        ...getPlanAttendances(plans)
+          .filter((attendance) => !attendance.done && !(attendance.planId === plan.id && attendance.itemId === itemId))
+          .map((attendance) => `${attendance.data} ${attendance.horario}`),
+      ]);
+      const blockedDates = new Set(
+        blockedPeriods.filter((item) => !item.time).map((item) => item.date),
+      );
+      const blockedSlots = new Set(
+        blockedPeriods.filter((item) => item.time).map((item) => `${item.date} ${item.time}`),
+      );
+      const slotKey = `${newDate} ${newTime}`;
+
+      if (
+        occupiedSlots.has(slotKey) ||
+        blockedDates.has(newDate) ||
+        blockedSlots.has(slotKey)
+      ) {
+        return sendJson(response, 409, {
+          message: 'Um dos horários escolhidos acabou de ficar indisponível. Escolha outro horário.',
+        });
+      }
+
+      const now = new Date().toISOString();
+      const checklist = plan.checklist.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              date: newDate,
+              time: newTime,
+              reminderSentAt: '',
+              clienteLembreteCanal: '',
+              ultimoErroLembrete: '',
+              editedAt: now,
+              editedBy: 'admin',
+            }
+          : item,
+      );
+
+      await updatePlan(id, {
+        uid: plan.uid,
+        clientEmail: plan.clientEmail,
+        nome: plan.nome,
+        telefone: plan.telefone,
+        planoOpcao: plan.planoOpcao,
+        plano: plan.plano,
+        servico: plan.servico,
+        preco: plan.preco,
+        limite: plan.limite,
+        assinaturaEm: plan.assinaturaEm,
+        expiraEm: plan.expiraEm,
+        observacao: plan.observacao,
+        checklist: JSON.stringify(checklist),
+        status: plan.status || 'ativo',
+        criadoEm: plan.criadoEm,
+      });
+
+      return sendJson(response, 200, {
+        message: 'Data do plano atualizada com sucesso.',
+      });
+    }
+
+    const itemId = String(request.body?.itemId || '').trim();
     const checklist = plan.checklist.map((item) =>
       item.id === itemId
         ? { ...item, done: true, doneAt: new Date().toISOString() }
@@ -411,6 +778,10 @@ export default async function handler(request, response) {
 
   if (request.method === 'GET' && mine === '1') {
     return listClientPlans(request, response);
+  }
+
+  if (id && request.method === 'PATCH' && mine === '1') {
+    return updateClientPlanAttendances(request, response, id);
   }
 
   if (id || request.method === 'GET') {

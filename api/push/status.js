@@ -1,16 +1,16 @@
-import { verifyAuthorizationHeader } from '../_lib/auth.js';
-import { getPublicVapidKey, getPushEnvironmentStatus } from '../_lib/push.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
+import { verifyAuthorizationHeader } from '../../server/lib/auth.js';
+import { getPublicVapidKey, getPushEnvironmentStatus } from '../../server/lib/push.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
 import {
   getWhatsAppEnvironmentStatus,
   sendBarberWhatsAppNotification,
-} from '../_lib/whatsapp.js';
+} from '../../server/lib/whatsapp.js';
 
 async function sendWhatsAppTest(response) {
   try {
     const delivery = await sendBarberWhatsAppNotification({
       id: 'diagnostico',
-      nome: 'Teste Barber GS',
+      nome: 'Teste Loja das Chaves',
       telefone: 'Nao informado',
       servico: 'diagnostico',
       data: new Date().toISOString().slice(0, 10),

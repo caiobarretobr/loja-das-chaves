@@ -25,3 +25,31 @@ export function fetchClientPlans(idToken) {
     },
   });
 }
+
+export function updateClientPlanAttendances(planId, payload, idToken) {
+  return apiRequest(`/api/planos?id=${encodeURIComponent(planId)}&mine=1`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchClientWhatsAppStatus(idToken) {
+  return apiRequest('/api/clientes/perfil?resource=whatsapp', {
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+}
+
+export function saveClientWhatsAppActivation(payload, idToken) {
+  return apiRequest('/api/clientes/perfil?resource=whatsapp', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}

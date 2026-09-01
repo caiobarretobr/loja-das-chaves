@@ -27,12 +27,15 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import EditCalendarRoundedIcon from '@mui/icons-material/EditCalendarRounded';
 import EventAvailableRoundedIcon from '@mui/icons-material/EventAvailableRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import UpdateRoundedIcon from '@mui/icons-material/UpdateRounded';
 import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useTranslation } from 'react-i18next';
 import { SERVICES, TIME_SLOTS, getTimeSlotsForDate } from '../../shared/constants/schedule';
 import { formatFullDate, sortAppointments } from '../../shared/utils/formatters';
@@ -51,6 +54,8 @@ import {
   loginAdmin,
   removeBlockedPeriod,
   removePlan,
+  rescheduleAppointment,
+  reschedulePlanAttendance,
 } from '../services/adminApi';
 
 function currency(value) {
@@ -74,6 +79,27 @@ function formatCompletedPlan(item) {
   return `${item.plano}${item.servico ? ` - ${item.servico}` : ''}`;
 }
 
+function isEconomicPlan(optionId = '') {
+  return optionId.startsWith('economico-');
+}
+
+function isEconomicAllowedDate(date = '') {
+  const parsed = new Date(`${date}T00:00:00-03:00`);
+  return !Number.isNaN(parsed.getTime()) && [1, 2, 3].includes(parsed.getDay());
+}
+
+function isFutureAttendance(date = '', time = '') {
+  const parsed = new Date(`${date}T${time}:00-03:00`);
+  return !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now();
+}
+
+function buildClientWhatsAppUrl(phone = '') {
+  const digits = String(phone || '').replace(/\D/g, '');
+  const nationalNumber = digits.startsWith('55') ? digits : `55${digits}`;
+
+  return `https://wa.me/${nationalNumber}`;
+}
+
 async function imageToDataUrl(url) {
   const response = await fetch(url);
   const blob = await response.blob();
@@ -93,15 +119,15 @@ async function downloadReportPdf(report) {
   let y = 16;
 
   try {
-    const logo = await imageToDataUrl('/barbergs.jpeg');
+    const logo = await imageToDataUrl('/favicon.jpeg');
     pdf.addImage(logo, 'JPEG', margin, y, 36, 22);
   } catch {
     pdf.setFontSize(14);
-    pdf.text('Barber GS', margin, y + 8);
+    pdf.text('Loja das Chaves', margin, y + 8);
   }
 
   pdf.setFontSize(16);
-  pdf.text('Relatório mensal - Barber GS', margin + 44, y + 8);
+  pdf.text('Relatório mensal - Loja das Chaves', margin + 44, y + 8);
   pdf.setFontSize(11);
   pdf.text(report.label, margin + 44, y + 16);
   y += 34;
@@ -295,7 +321,7 @@ function ReportDetails({ report, emptyText }) {
   );
 }
 
-function AdminPanel({ open, onClose, onDataChanged }) {
+function AdminPanel({ open, onClose, onDataChanged, availability }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -315,6 +341,14 @@ function AdminPanel({ open, onClose, onDataChanged }) {
   const [finishingId, setFinishingId] = useState('');
   const [cancelingId, setCancelingId] = useState('');
   const [updatingPlanItem, setUpdatingPlanItem] = useState('');
+  const [editingAppointmentId, setEditingAppointmentId] = useState('');
+  const [editingAppointmentData, setEditingAppointmentData] = useState({
+    date: '',
+    time: '',
+    originalDate: '',
+    originalTime: '',
+  });
+  const [editingPlanAttendance, setEditingPlanAttendance] = useState(null);
   const [removingPlanId, setRemovingPlanId] = useState('');
   const [reopeningId, setReopeningId] = useState('');
   const [deletingReportMonth, setDeletingReportMonth] = useState('');
@@ -423,6 +457,100 @@ function AdminPanel({ open, onClose, onDataChanged }) {
       date: '',
       time: '',
     });
+  }
+
+  function startEditingAppointment(appointment) {
+    setEditingAppointmentId(appointment.id);
+    setEditingAppointmentData({
+      date: appointment.data,
+      time: appointment.horario,
+      originalDate: appointment.data,
+      originalTime: appointment.horario,
+    });
+    setError('');
+    setInfo('');
+  }
+
+  function updateEditingAppointment(field, value) {
+    setEditingAppointmentData((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === 'date' ? { time: '' } : {}),
+    }));
+    setError('');
+    setInfo('');
+  }
+
+  async function saveEditedAppointment() {
+    if (!editingAppointmentId) {
+      return;
+    }
+
+    if (!editingAppointmentData.date || !editingAppointmentData.time) {
+      setError('Escolha a nova data e o novo horário.');
+      return;
+    }
+
+    try {
+      await rescheduleAppointment(editingAppointmentId, {
+        data: editingAppointmentData.date,
+        horario: editingAppointmentData.time,
+      });
+      setInfo('Data do atendimento atualizada com sucesso.');
+      setEditingAppointmentId('');
+      setEditingAppointmentData({ date: '', time: '', originalDate: '', originalTime: '' });
+      await loadDashboard();
+      await onDataChanged?.();
+    } catch (saveError) {
+      setError(saveError.message || 'Não foi possível atualizar a data do atendimento.');
+    }
+  }
+
+  function startEditingPlanAttendance(plan, item) {
+    setEditingPlanAttendance({
+      planId: plan.id,
+      itemId: item.id,
+      date: item.date,
+      time: item.time,
+      originalDate: item.date,
+      originalTime: item.time,
+    });
+    setError('');
+    setInfo('');
+  }
+
+  function updateEditingPlanAttendance(field, value) {
+    setEditingPlanAttendance((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === 'date' ? { time: '' } : {}),
+    }));
+    setError('');
+    setInfo('');
+  }
+
+  async function saveEditedPlanAttendance() {
+    if (!editingPlanAttendance?.planId || !editingPlanAttendance?.itemId) {
+      return;
+    }
+
+    if (!editingPlanAttendance.date || !editingPlanAttendance.time) {
+      setError('Escolha a nova data e o novo horário.');
+      return;
+    }
+
+    try {
+      await reschedulePlanAttendance(editingPlanAttendance.planId, editingPlanAttendance.itemId, {
+        date: editingPlanAttendance.date,
+        time: editingPlanAttendance.time,
+      });
+      setInfo('Data do plano atualizada com sucesso.');
+      setEditingPlanAttendance(null);
+      await loadDashboard();
+      await onDataChanged?.();
+    } catch (saveError) {
+      setError(saveError.message || 'Não foi possível atualizar a data do plano.');
+    }
   }
 
   async function handleDelete(id) {
@@ -781,6 +909,19 @@ function AdminPanel({ open, onClose, onDataChanged }) {
                 <List disablePadding>
                   {appointments.map((appointment, index) => {
                     const service = SERVICES.find((item) => item.id === appointment.servico);
+                    const isEditingAppointment = editingAppointmentId === appointment.id;
+                    const canEditAppointment = Boolean(
+                      appointment.data &&
+                      appointment.horario &&
+                      isFutureAttendance(appointment.data, appointment.horario),
+                    );
+                    const appointmentSlots = (availability?.slotsByDate?.[editingAppointmentData.date] || [])
+                      .filter((slot) =>
+                        slot.available || (
+                          editingAppointmentData.originalDate === editingAppointmentData.date &&
+                          editingAppointmentData.originalTime === slot.time
+                        ),
+                      );
 
                     return (
                       <div key={appointment.id}>
@@ -826,8 +967,19 @@ function AdminPanel({ open, onClose, onDataChanged }) {
                                   >
                                     {finishingId === appointment.id
                                       ? t('adminMarkLoading')
-                                      : 'Finalizar atendimento'}
+                                      : 'Finalizar pedido'}
                                   </Button>
+                                  {appointment.telefone ? (
+                                    <Button
+                                      variant="outlined"
+                                      startIcon={<WhatsAppIcon />}
+                                      href={buildClientWhatsAppUrl(appointment.telefone)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Entrar em contato
+                                    </Button>
+                                  ) : null}
                                   <Button
                                     variant="outlined"
                                     color="error"
@@ -837,9 +989,78 @@ function AdminPanel({ open, onClose, onDataChanged }) {
                                   >
                                     {cancelingId === appointment.id
                                       ? t('adminMarkLoading')
-                                      : 'Cancelar atendimento'}
+                                      : 'Cancelar pedido'}
                                   </Button>
+                                  {canEditAppointment && !isEditingAppointment ? (
+                                    <Button
+                                      variant="outlined"
+                                      color="secondary"
+                                      startIcon={<EditCalendarRoundedIcon />}
+                                      disabled={finishingId === appointment.id || cancelingId === appointment.id}
+                                      onClick={() => startEditingAppointment(appointment)}
+                                    >
+                                      Editar data
+                                    </Button>
+                                  ) : null}
                                 </Stack>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                                  OBS: O botão notificar cliente serve para aqueles que fizeram o pedido de um produto
+                                </Typography>
+                                {isEditingAppointment ? (
+                                  <Stack spacing={1.2} mt={1.2}>
+                                    <Typography variant="body2" color="text.secondary">
+                                      Escolha a nova data e horário para este atendimento.
+                                    </Typography>
+                                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        label="Nova data"
+                                        value={editingAppointmentData.date}
+                                        onChange={(event) => updateEditingAppointment('date', event.target.value)}
+                                      >
+                                        {(availability?.dates || []).filter((item) => item.status !== 'blocked').map((item) => (
+                                          <MenuItem key={item.date} value={item.date}>
+                                            {formatFullDate(item.date)}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                      <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        label="Novo horário"
+                                        value={editingAppointmentData.time}
+                                        onChange={(event) => updateEditingAppointment('time', event.target.value)}
+                                      >
+                                        {appointmentSlots.map((slot) => (
+                                          <MenuItem key={slot.time} value={slot.time}>
+                                            {slot.time}
+                                          </MenuItem>
+                                        ))}
+                                      </TextField>
+                                    </Stack>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                      <Button
+                                        variant="contained"
+                                        startIcon={<SaveRoundedIcon />}
+                                        onClick={saveEditedAppointment}
+                                      >
+                                        Salvar nova data
+                                      </Button>
+                                      <Button
+                                        variant="outlined"
+                                        onClick={() => {
+                                          setEditingAppointmentId('');
+                                          setEditingAppointmentData({ date: '', time: '', originalDate: '', originalTime: '' });
+                                        }}
+                                      >
+                                        Cancelar
+                                      </Button>
+                                    </Stack>
+                                  </Stack>
+                                ) : null}
                               </Stack>
                             )}
                           />
@@ -952,6 +1173,11 @@ function AdminPanel({ open, onClose, onDataChanged }) {
                 <List disablePadding>
                   {plans.map((plan, index) => {
                     const completed = plan.checklist.filter((item) => item.done).length;
+                    const availableDates = (availability?.dates || []).filter((item) =>
+                      isEconomicPlan(plan.planoOpcao)
+                        ? isEconomicAllowedDate(item.date) && item.status !== 'blocked'
+                        : item.status !== 'blocked',
+                    );
 
                     return (
                       <div key={plan.id}>
@@ -1004,23 +1230,107 @@ function AdminPanel({ open, onClose, onDataChanged }) {
                                   {plan.observacao || t('notesFallback')}
                                 </Typography>
                                 <Stack spacing={0.7}>
-                                  {plan.checklist.map((item) => (
-                                    <Button
-                                      key={item.id}
-                                      variant={item.done ? 'contained' : 'outlined'}
-                                      color={item.done ? 'success' : 'secondary'}
-                                      disabled={item.done || updatingPlanItem === `${plan.id}:${item.id}`}
-                                      onClick={() => handleCompletePlanItem(plan.id, item.id)}
-                                      sx={{ justifyContent: 'flex-start', borderRadius: 1.5 }}
-                                      startIcon={<Checkbox checked={Boolean(item.done)} />}
-                                    >
-                                      {item.label}
-                                      {item.date && item.time
-                                        ? ` - ${formatFullDate(item.date)} às ${item.time}`
-                                        : ''}
-                                      {item.doneAt ? ` - concluído em ${formatFullDate(item.doneAt.slice(0, 10))}` : ''}
-                                    </Button>
-                                  ))}
+                                  {plan.checklist.map((item) => {
+                                    const isEditingPlanAttendance = Boolean(
+                                      editingPlanAttendance?.planId === plan.id &&
+                                      editingPlanAttendance?.itemId === item.id,
+                                    );
+                                    const canEditPlanAttendance = Boolean(
+                                      item.date &&
+                                      item.time &&
+                                      !item.done &&
+                                      isFutureAttendance(item.date, item.time),
+                                    );
+                                    const planAttendanceSlots = (availability?.slotsByDate?.[editingPlanAttendance?.date] || [])
+                                      .filter((slot) =>
+                                        slot.available || (
+                                          editingPlanAttendance?.originalDate === editingPlanAttendance?.date &&
+                                          editingPlanAttendance?.originalTime === slot.time
+                                        ),
+                                      );
+
+                                    return (
+                                      <Stack key={item.id} spacing={1}>
+                                        <Button
+                                          variant={item.done ? 'contained' : 'outlined'}
+                                          color={item.done ? 'success' : 'secondary'}
+                                          disabled={item.done || updatingPlanItem === `${plan.id}:${item.id}`}
+                                          onClick={() => handleCompletePlanItem(plan.id, item.id)}
+                                          sx={{ justifyContent: 'flex-start', borderRadius: 1.5 }}
+                                          startIcon={<Checkbox checked={Boolean(item.done)} />}
+                                        >
+                                          {item.label}
+                                          {item.date && item.time
+                                            ? ` - ${formatFullDate(item.date)} às ${item.time}`
+                                            : ''}
+                                          {item.doneAt ? ` - concluído em ${formatFullDate(item.doneAt.slice(0, 10))}` : ''}
+                                        </Button>
+                                        {canEditPlanAttendance && !isEditingPlanAttendance ? (
+                                          <Button
+                                            variant="outlined"
+                                            size="small"
+                                            startIcon={<EditCalendarRoundedIcon />}
+                                            onClick={() => startEditingPlanAttendance(plan, item)}
+                                            sx={{ justifyContent: 'flex-start' }}
+                                          >
+                                            Editar data
+                                          </Button>
+                                        ) : null}
+                                        {isEditingPlanAttendance ? (
+                                          <Stack spacing={1}>
+                                            <Typography variant="body2" color="text.secondary">
+                                              Escolha a nova data e horário para esta data do plano.
+                                            </Typography>
+                                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2}>
+                                              <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                label="Nova data"
+                                                value={editingPlanAttendance.date}
+                                                onChange={(event) => updateEditingPlanAttendance('date', event.target.value)}
+                                              >
+                                                {availableDates.map((dateItem) => (
+                                                  <MenuItem key={dateItem.date} value={dateItem.date}>
+                                                    {formatFullDate(dateItem.date)}
+                                                  </MenuItem>
+                                                ))}
+                                              </TextField>
+                                              <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                label="Novo horário"
+                                                value={editingPlanAttendance.time}
+                                                onChange={(event) => updateEditingPlanAttendance('time', event.target.value)}
+                                              >
+                                                {planAttendanceSlots.map((slot) => (
+                                                  <MenuItem key={slot.time} value={slot.time}>
+                                                    {slot.time}
+                                                  </MenuItem>
+                                                ))}
+                                              </TextField>
+                                            </Stack>
+                                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                              <Button
+                                                variant="contained"
+                                                startIcon={<SaveRoundedIcon />}
+                                                onClick={saveEditedPlanAttendance}
+                                              >
+                                                Salvar nova data
+                                              </Button>
+                                              <Button
+                                                variant="outlined"
+                                                onClick={() => setEditingPlanAttendance(null)}
+                                              >
+                                                Cancelar
+                                              </Button>
+                                            </Stack>
+                                          </Stack>
+                                        ) : null}
+                                      </Stack>
+                                    );
+                                  })}
                                 </Stack>
                               </Stack>
                             )}

@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { verifyAuthorizationHeader } from '../_lib/auth.js';
-import { listClientSubscriptions, upsertClientSubscription } from '../_lib/firestore.js';
-import { validatePushSubscription } from '../_lib/push.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
+import { verifyAuthorizationHeader } from '../../server/lib/auth.js';
+import { listClientSubscriptions, upsertClientSubscription } from '../../server/lib/firestore.js';
+import { validatePushSubscription } from '../../server/lib/push.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
 
 function createClientSubscriptionId(payload) {
   const rawValue = [

@@ -1,7 +1,7 @@
 {
-  "name": "Barber GS - Agendamento Online",
-  "short_name": "Barber GS",
-  "description": "Agendamento online da barbearia Barber GS.",
+  "name": "Loja das Chaves - Agendamento Online",
+  "short_name": "Loja das Chaves",
+  "description": "Agendamento online da Loja das Chaves.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,7 +10,7 @@
   "gcm_sender_id": "103953800507",
   "icons": [
     {
-      "src": "/favicon.jpeg",
+      "src": "/lojarafa.jpg",
       "sizes": "1024x1024",
       "type": "image/jpeg",
       "purpose": "any maskable"

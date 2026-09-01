@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDateLabel } from '../../shared/utils/formatters';
 
 const statusColorByType = {
-  available: 'success',
+  available: 'primary',
   partial: 'warning',
   full: 'default',
   blocked: 'error',

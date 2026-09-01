@@ -1,7 +1,13 @@
-import { verifyFirebaseAuthorizationHeader } from '../_lib/auth.js';
-import { getClientProfile, upsertClientProfile } from '../_lib/firestore.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
-import { isValidPhone, normalizePhone } from '../_lib/validation.js';
+import { verifyFirebaseAuthorizationHeader } from '../../server/lib/auth.js';
+import {
+  getClientProfile,
+  getClientWhatsAppNotification,
+  upsertClientProfile,
+  upsertClientWhatsAppNotification,
+} from '../../server/lib/firestore.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
+import { isValidPhone, normalizePhone } from '../../server/lib/validation.js';
+import { parseClientCallMeBotActivation } from '../../server/lib/whatsapp.js';
 
 function getProviderName(firebase = {}) {
   const identities = firebase.identities || {};
@@ -35,6 +41,20 @@ function publicProfile(profile) {
   };
 }
 
+function publicWhatsAppStatus(record) {
+  return {
+    enabled: Boolean(record?.enabled && record?.status !== 'disabled'),
+    phone: record?.phone ? `*****${record.phone.slice(-4)}` : '',
+    provider: record?.provider || 'callmebot',
+    atualizadoEm: record?.atualizadoEm || '',
+  };
+}
+
+function getQueryValue(request, key) {
+  const value = request.query?.[key];
+  return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
 export default async function handler(request, response) {
   if (!['GET', 'POST', 'PATCH'].includes(request.method)) {
     return methodNotAllowed(response);
@@ -49,6 +69,41 @@ export default async function handler(request, response) {
   }
 
   try {
+    if (getQueryValue(request, 'resource') === 'whatsapp') {
+      if (request.method === 'PATCH') {
+        return methodNotAllowed(response);
+      }
+
+      if (request.method === 'GET') {
+        const record = await getClientWhatsAppNotification(user.uid);
+
+        return sendJson(response, 200, {
+          whatsapp: publicWhatsAppStatus(record),
+        });
+      }
+
+      const activation = parseClientCallMeBotActivation(
+        request.body?.message || request.body?.url || '',
+      );
+
+      if (!activation) {
+        return sendJson(response, 400, {
+          message: 'Não foi possível encontrar um link válido do CallMeBot. Confira a mensagem e tente novamente.',
+        });
+      }
+
+      const record = await upsertClientWhatsAppNotification(user.uid, {
+        email: user.email,
+        phone: activation.phone,
+        apikey: activation.apikey,
+      });
+
+      return sendJson(response, 200, {
+        whatsapp: publicWhatsAppStatus(record),
+        message: 'Notificações via WhatsApp ativadas com sucesso.',
+      });
+    }
+
     if (request.method === 'GET') {
       const profile = await getClientProfile(user.uid);
 

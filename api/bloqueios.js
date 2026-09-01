@@ -1,11 +1,11 @@
-import { verifyAuthorizationHeader } from './_lib/auth.js';
-import { deleteBlockedPeriod, listBlockedPeriods, upsertBlockedPeriod } from './_lib/firestore.js';
-import { methodNotAllowed, sendJson } from './_lib/response.js';
+import { verifyAuthorizationHeader } from '../server/lib/auth.js';
+import { deleteBlockedPeriod, listBlockedPeriods, upsertBlockedPeriod } from '../server/lib/firestore.js';
+import { methodNotAllowed, sendJson } from '../server/lib/response.js';
 import {
   buildBlockedPeriodId,
   getBlockedPeriodKind,
   validateBlockedPeriodPayload,
-} from './_lib/validation.js';
+} from '../server/lib/validation.js';
 
 function getQueryValue(request, key) {
   const value = request.query?.[key];

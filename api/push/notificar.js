@@ -1,6 +1,6 @@
-import { verifyAuthorizationHeader } from '../_lib/auth.js';
-import { notifyBarberDevices, notifyClientAndBarberDevices } from '../_lib/push.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
+import { verifyAuthorizationHeader } from '../../server/lib/auth.js';
+import { notifyBarberDevices, notifyClientAndBarberDevices } from '../../server/lib/push.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
 
 const ALLOWED_MESSAGES = new Set([
   'Novo agendamento confirmado!',
@@ -10,7 +10,7 @@ const ALLOWED_MESSAGES = new Set([
 function isAllowedMessage(message = '') {
   return (
     ALLOWED_MESSAGES.has(message) ||
-    /^Corte agendado para daqui a 1 hora ou menos! O atendimento foi marcado para .+, lembre-se de chegar na barbearia 5 minutos antes\.$/.test(message)
+    /^Seu atendimento na Loja das Chaves será às .+\. Lembre-se de chegar 5 minutos antes\.$/.test(message)
   );
 }
 
@@ -35,9 +35,9 @@ export default async function handler(request, response) {
 
   try {
     const payload = {
-      title: 'Barber GS',
+      title: 'Loja das Chaves',
       body: message,
-      tag: tag || 'barbergs-agendamento',
+      tag: tag || 'loja-chaves-agendamento',
       url: '/',
     };
     const delivery = clientSubscriptionId
@@ -45,7 +45,7 @@ export default async function handler(request, response) {
       : await notifyBarberDevices(payload);
 
     return sendJson(response, 200, {
-      message: 'Notificação enviada para a lista do barbeiro.',
+      message: 'Notificação enviada para a lista da loja.',
       delivery,
     });
   } catch (error) {

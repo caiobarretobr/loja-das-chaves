@@ -29,7 +29,8 @@ body {
 }
 
 .hero-panel {
-  background: linear-gradient(180deg, #ffffff 0%, #fff7d6 100%);
+  background:
+    linear-gradient(135deg, rgba(232, 242, 255, 0.96) 0%, rgba(255, 239, 247, 0.96) 100%);
 }
 
 .phone-first-shell {
@@ -70,7 +71,7 @@ body {
 
 .choice-card,
 .plan-table {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .mobile-submit-bar {

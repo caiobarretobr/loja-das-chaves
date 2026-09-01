@@ -1,17 +1,20 @@
-import { verifyAuthorizationHeader } from './_lib/auth.js';
-import { SERVICES } from './_lib/constants.js';
+import { verifyAuthorizationHeader, verifyFirebaseAuthorizationHeader } from '../server/lib/auth.js';
+import { SERVICES } from '../server/lib/constants.js';
 import {
   createAppointment,
   createCanceledService,
   createFinishedService,
   deleteAppointment,
+  getPlanAttendances,
   listAppointments,
   listBlockedPeriods,
-} from './_lib/firestore.js';
-import { getCurrentReportMonthKey } from './_lib/reports.js';
-import { methodNotAllowed, sendJson } from './_lib/response.js';
-import { normalizePhone, validateAppointmentPayload } from './_lib/validation.js';
-import { sendBarberWhatsAppNotification } from './_lib/whatsapp.js';
+  listPlans,
+  updateAppointment,
+} from '../server/lib/firestore.js';
+import { getCurrentReportMonthKey } from '../server/lib/reports.js';
+import { methodNotAllowed, sendJson } from '../server/lib/response.js';
+import { normalizePhone, validateAppointmentPayload } from '../server/lib/validation.js';
+import { sendBarberWhatsAppNotification } from '../server/lib/whatsapp.js';
 
 function getQueryValue(request, key) {
   const value = request.query?.[key];
@@ -31,6 +34,28 @@ async function notifyBarber(appointment) {
     console.error('Falha ao enviar notificacao de WhatsApp:', error);
     return { sent: false, error: error.message || 'Falha ao enviar WhatsApp.' };
   }
+}
+
+function getAppointmentConflictData(appointments = [], blockedPeriods = [], plans = [], appointmentId = '', targetDate = '', targetTime = '') {
+  const occupiedItems = [
+    ...appointments.filter((item) => item.id !== appointmentId),
+    ...getPlanAttendances(plans).filter((item) => !item.done),
+  ];
+  const hasConflict = occupiedItems.some(
+    (item) => item.data === targetDate && item.horario === targetTime,
+  );
+  const hasBlockedDate = blockedPeriods.some(
+    (item) => item.date === targetDate && !item.time,
+  );
+  const hasBlockedTime = blockedPeriods.some(
+    (item) => item.date === targetDate && item.time === targetTime,
+  );
+
+  return {
+    hasConflict,
+    hasBlockedDate,
+    hasBlockedTime,
+  };
 }
 
 async function listAdminAppointments(request, response) {
@@ -66,9 +91,18 @@ async function createClientAppointment(request, response) {
       });
     }
 
-    const appointments = await listAppointments();
-    const blockedPeriods = await listBlockedPeriods();
-    const hasConflict = appointments.some(
+    const user = await verifyFirebaseAuthorizationHeader(request.headers.authorization || '')
+      .catch(() => null);
+    const [appointments, blockedPeriods, plans] = await Promise.all([
+      listAppointments(),
+      listBlockedPeriods(),
+      listPlans(),
+    ]);
+    const occupiedItems = [
+      ...appointments,
+      ...getPlanAttendances(plans).filter((item) => !item.done),
+    ];
+    const hasConflict = occupiedItems.some(
       (item) =>
         item.data === request.body.data &&
         item.horario === request.body.horario,
@@ -90,15 +124,19 @@ async function createClientAppointment(request, response) {
 
     if (hasBlockedDate || hasBlockedTime) {
       return sendJson(response, 409, {
-        message: 'Esse horário foi fechado pelo barbeiro. Escolha outra data ou horário.',
+        message: 'Esse horário foi fechado pela loja. Escolha outra data ou horário.',
       });
     }
 
     const service = SERVICES[request.body.servico];
     const payload = {
+      uid: user?.uid || '',
+      clientEmail: user?.email || '',
       nome: String(request.body.nome || '').trim(),
       telefone: normalizePhone(String(request.body.telefone || '')),
       servico: service.id,
+      servicoNome: service.nome,
+      categoria: service.categoria,
       data: String(request.body.data || '').trim(),
       horario: String(request.body.horario || '').trim(),
       observacao: String(request.body.observacao || '').trim(),
@@ -145,6 +183,62 @@ async function updateAdminAppointment(request, response, id) {
     }
 
     if (request.method === 'PATCH') {
+      if (request.body?.action === 'reschedule') {
+        const nextDate = String(request.body?.data || '').trim();
+        const nextTime = String(request.body?.horario || '').trim();
+
+        if (!nextDate || !nextTime) {
+          return sendJson(response, 400, {
+            message: 'Escolha uma nova data e um novo horário.',
+          });
+        }
+
+        const [blockedPeriods, plans] = await Promise.all([
+          listBlockedPeriods(),
+          listPlans(),
+        ]);
+        const conflictData = getAppointmentConflictData(
+          appointments,
+          blockedPeriods,
+          plans,
+          id,
+          nextDate,
+          nextTime,
+        );
+
+        if (conflictData.hasConflict) {
+          return sendJson(response, 409, {
+            message: 'Esse horário acabou de ser reservado. Escolha outro para continuar.',
+          });
+        }
+
+        if (conflictData.hasBlockedDate || conflictData.hasBlockedTime) {
+          return sendJson(response, 409, {
+            message: 'Esse horário foi fechado pela loja. Escolha outra data ou horário.',
+          });
+        }
+
+        await updateAppointment(id, {
+          uid: appointment.uid,
+          clientEmail: appointment.clientEmail,
+          nome: appointment.nome,
+          telefone: appointment.telefone,
+          servico: appointment.servico,
+          data: nextDate,
+          horario: nextTime,
+          observacao: appointment.observacao,
+          preco: appointment.preco,
+          criadoEm: appointment.criadoEm,
+          lembreteEnviadoEm: appointment.lembreteEnviadoEm || '',
+          clienteLembreteCanal: appointment.clienteLembreteCanal || '',
+          ultimoErroLembrete: appointment.ultimoErroLembrete || '',
+        });
+
+        return sendJson(response, 200, {
+          message: 'Data do atendimento atualizada com sucesso.',
+        });
+      }
+
       const now = new Date().toISOString();
       await createFinishedService({
         id,

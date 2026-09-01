@@ -1,4 +1,4 @@
-import { verifyAuthorizationHeader } from './_lib/auth.js';
+import { verifyAuthorizationHeader } from '../server/lib/auth.js';
 import {
   deleteCanceledService,
   deleteCompletedPlan,
@@ -6,9 +6,9 @@ import {
   listCanceledServices,
   listCompletedPlans,
   listFinishedServices,
-} from './_lib/firestore.js';
-import { buildMonthlyReports } from './_lib/reports.js';
-import { methodNotAllowed, sendJson } from './_lib/response.js';
+} from '../server/lib/firestore.js';
+import { buildMonthlyReports } from '../server/lib/reports.js';
+import { methodNotAllowed, sendJson } from '../server/lib/response.js';
 
 function getQueryValue(request, key) {
   const value = request.query?.[key];

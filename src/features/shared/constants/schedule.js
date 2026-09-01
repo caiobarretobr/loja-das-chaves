@@ -1,280 +1,222 @@
-export const SLOT_DURATION_MINUTES = 45;
+export const SLOT_DURATION_MINUTES = 120;
 
-export const WEEKDAY_TIME_SLOTS = [
-  '09:00',
-  '09:45',
-  '10:30',
-  '11:15',
-  '13:00',
-  '13:45',
-  '14:30',
-  '15:15',
-  '16:00',
-  '16:45',
-  '17:30',
-  '18:15',
-];
-
-export const EXTENDED_WEEKDAY_TIME_SLOTS = [
-  ...WEEKDAY_TIME_SLOTS,
-  '19:30',
-];
-
-export const SUNDAY_TIME_SLOTS = [
-  '09:00',
-  '09:45',
-  '10:30',
-  '11:15',
-  '12:00',
-  '12:45',
-];
-
-export const TIME_SLOTS = [
-  ...new Set([...EXTENDED_WEEKDAY_TIME_SLOTS, ...WEEKDAY_TIME_SLOTS, ...SUNDAY_TIME_SLOTS]),
-];
+export const TIME_SLOTS = ['08:00', '10:00'];
 
 export function getTimeSlotsForDate(date = '') {
   const parsedDate = new Date(`${date}T00:00:00`);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return EXTENDED_WEEKDAY_TIME_SLOTS;
+    return TIME_SLOTS;
   }
 
-  const day = parsedDate.getDay();
-
-  if (day === 0) {
-    return SUNDAY_TIME_SLOTS;
-  }
-
-  if ([1, 2, 3, 5, 6].includes(day)) {
-    return EXTENDED_WEEKDAY_TIME_SLOTS;
-  }
-
-  return WEEKDAY_TIME_SLOTS;
+  return [2, 3, 4].includes(parsedDate.getDay()) ? TIME_SLOTS : [];
 }
 
-export const SERVICES = [
+export const SERVICE_CATEGORIES = [
   {
-    id: 'cabelo',
-    name: 'Cabelo',
-    description: 'Corte completo com acabamento.',
-    price: 28,
-    duration: 45,
-  },
-  {
-    id: 'sobrancelhas',
-    name: 'Sobrancelhas',
-    description: 'Design e alinhamento das sobrancelhas.',
-    price: 13,
-    duration: 20,
-  },
-  {
-    id: 'platinado',
-    name: 'Platinado',
-    description: 'Descoloração e tonalização para visual platinado.',
-    price: 55,
-    duration: 90,
-  },
-  {
-    id: 'acabamento',
-    name: 'Acabamento',
-    description: 'Limpeza dos contornos para manter a régua em dia.',
-    price: 13,
-    duration: 20,
-  },
-  {
-    id: 'pigmentacao',
-    name: 'Pigmentação',
-    description: 'Aplicação de pigmento para acabamento mais marcado.',
-    price: 25,
-    duration: 45,
-  },
-  {
-    id: 'luzes',
-    name: 'Luzes',
-    description: 'Mechas e iluminação no cabelo.',
-    price: 45,
-    duration: 75,
-  },
-  {
-    id: 'barba-simples',
-    name: 'Barba simples',
-    description: 'Alinhamento e desenho da barba.',
-    price: 20,
-    duration: 30,
-    durationLabel: '25-30 min',
-  },
-  {
-    id: 'barboterapia',
-    name: 'Barboterapia',
-    description: 'Barba com toalha quente e finalização premium.',
-    price: 30,
-    duration: 35,
-  },
-];
-
-export const COMBOS = [
-  {
-    id: 'cabelo-sobrancelhas',
-    name: 'Cabelo + sobrancelhas',
-    description: 'Corte completo com sobrancelhas alinhadas.',
-    price: 36,
-    duration: 60,
-  },
-  {
-    id: 'cabelo-luzes',
-    name: 'Cabelo + luzes',
-    description: 'Corte completo com luzes.',
-    price: 65,
-    duration: 105,
-  },
-  {
-    id: 'cabelo-pigmentacao',
-    name: 'Cabelo + pigmentação',
-    description: 'Corte completo com pigmentação.',
-    price: 47,
-    duration: 75,
-  },
-  {
-    id: 'cabelo-platinado',
-    name: 'Cabelo + platinado',
-    description: 'Corte completo com platinado.',
-    price: 74,
-    duration: 120,
-  },
-  {
-    id: 'cabelo-barba-simples',
-    name: 'Cabelo + barba simples',
-    description: 'Corte completo com barba simples.',
-    price: 43,
-    duration: 80,
-    durationLabel: '1h20',
-  },
-  {
-    id: 'cabelo-barboterapia',
-    name: 'Cabelo + barboterapia',
-    description: 'Corte completo com barboterapia.',
-    price: 50,
-    duration: 90,
-  },
-  {
-    id: 'cabelo-sobrancelhas-luzes',
-    name: 'Cabelo + sobrancelhas + luzes',
-    description: 'Pacote com corte, sobrancelhas e luzes.',
-    price: 77,
-    duration: 120,
-  },
-  {
-    id: 'cabelo-sobrancelhas-platinado',
-    name: 'Cabelo + sobrancelhas + platinado',
-    description: 'Pacote com corte, sobrancelhas e platinado.',
-    price: 86,
-    duration: 135,
-  },
-  {
-    id: 'cabelo-sobrancelhas-pigmentacao',
-    name: 'Cabelo + sobrancelhas + pigmentação',
-    description: 'Pacote com corte, sobrancelhas e pigmentação.',
-    price: 59,
-    duration: 90,
-  },
-  {
-    id: 'cabelo-sobrancelhas-barba-simples',
-    name: 'Cabelo + sobrancelhas + barba simples',
-    description: 'Pacote com corte, sobrancelhas e barba simples.',
-    price: 54,
-    duration: 90,
-  },
-  {
-    id: 'cabelo-sobrancelhas-barboterapia',
-    name: 'Cabelo + sobrancelhas + barboterapia',
-    description: 'Pacote com corte, sobrancelhas e barboterapia.',
-    price: 60,
-    duration: 105,
-  },
-  {
-    id: 'sobrancelhas-barba-simples',
-    name: 'Sobrancelhas + barba simples',
-    description: 'Sobrancelhas alinhadas com barba simples.',
-    price: 29,
-    duration: 45,
-  },
-  {
-    id: 'sobrancelhas-barboterapia',
-    name: 'Sobrancelhas + barboterapia',
-    description: 'Sobrancelhas alinhadas com barboterapia.',
-    price: 38,
-    duration: 60,
-  },
-  {
-    id: 'sobrancelhas-acabamento',
-    name: 'Sobrancelhas + acabamento',
-    description: 'Sobrancelhas com acabamento dos contornos.',
-    price: 23,
-    duration: 40,
-  },
-  {
-    id: 'sobrancelhas-acabamento-barba-simples',
-    name: 'Sobrancelhas + acabamento + barba simples',
-    description: 'Sobrancelhas, acabamento e barba simples.',
-    price: 41,
-    duration: 65,
-  },
-  {
-    id: 'sobrancelhas-acabamento-barboterapia',
-    name: 'Sobrancelhas + acabamento + barboterapia',
-    description: 'Sobrancelhas, acabamento e barboterapia.',
-    price: 50,
-    duration: 80,
-  },
-];
-
-export const BOOKING_SERVICES = [...SERVICES, ...COMBOS];
-
-export const PLAN_TYPES = [
-  {
-    id: 'semanal',
-    name: 'Plano semanal',
-    subtitle: 'Máx: 4x/mês',
-    description: 'Dias para atendimento do plano semanal: Segunda à Domingo',
-    limit: 4,
-    validityDays: 30,
+    id: 'amolacao-ferramentas',
+    name: 'Amolação de ferramentas',
+    description: 'Afiação cuidadosa para ferramentas do dia a dia e trabalho.',
+    image: '/imagens/secao/amolacao.jpg',
     services: [
-      { id: 'semanal-cabelo', name: 'Cabelo', price: 89 },
-      { id: 'semanal-sobrancelhas', name: 'Sobrancelhas', price: 41 },
-      { id: 'semanal-barba-simples', name: 'Barba simples', price: 64 },
-      { id: 'semanal-barboterapia', name: 'Barboterapia', price: 96 },
-      { id: 'semanal-cabelo-sobrancelhas', name: 'Cabelo + sobrancelhas', price: 131 },
-      { id: 'semanal-cabelo-barba-simples', name: 'Cabelo + barba simples', price: 153 },
-      { id: 'semanal-cabelo-barboterapia', name: 'Cabelo + barboterapia', price: 185 },
-      { id: 'semanal-sobrancelhas-barba-simples', name: 'Sobrancelhas + barba simples', price: 105 },
-      { id: 'semanal-sobrancelhas-barboterapia', name: 'Sobrancelhas + barboterapia', price: 137 },
-      { id: 'semanal-cabelo-barba-sobrancelhas', name: 'Cabelo + barba + sobrancelhas', price: 195 },
-      { id: 'semanal-premium', name: 'Premium', price: 227 },
+      {
+        id: 'alicate',
+        name: 'Alicate',
+        description: 'Amolação de alicate com acabamento preciso para corte limpo.',
+        price: 12,
+        image: '/lojarafa.jpg',
+      },
+      {
+        id: 'tesoura',
+        name: 'Tesoura',
+        description: 'Afiação de tesouras domésticas e profissionais.',
+        price: 10,
+        image: '/lojarafa.jpg',
+      },
+      {
+        id: 'faca',
+        name: 'Faca',
+        description: 'Afiação de facas para cozinha, comércio ou uso geral.',
+        price: 10,
+        image: '/lojarafa.jpg',
+      },
     ],
   },
   {
-    id: 'economico',
-    name: 'Plano econômico',
-    subtitle: 'Máx: 2x/mês',
-    description: 'Dias para atendimento do plano econômico: Segunda à Quarta',
-    limit: 2,
-    validityDays: 30,
+    id: 'chaves-de-carro',
+    name: 'Chaves de carro',
+    description: 'Cópias, carcaças, chips, telecomandos e manutenção de chaves automotivas.',
+    image: '/imagens/secao/chavesdecarro.jpeg',
     services: [
-      { id: 'economico-cabelo', name: 'Cabelo', price: 45 },
-      { id: 'economico-sobrancelhas', name: 'Sobrancelhas', price: 21 },
-      { id: 'economico-barba-simples', name: 'Barba simples', price: 32 },
-      { id: 'economico-barboterapia', name: 'Barboterapia', price: 48 },
-      { id: 'economico-cabelo-barba', name: 'Cabelo + barba', price: 76 },
-      { id: 'economico-cabelo-barboterapia', name: 'Cabelo + barboterapia', price: 92 },
-      { id: 'economico-cabelo-sobrancelhas', name: 'Cabelo + sobrancelhas', price: 65 },
-      { id: 'economico-sobrancelhas-barba-simples', name: 'Sobrancelhas + barba simples', price: 52 },
-      { id: 'economico-sobrancelhas-barboterapia', name: 'Sobrancelhas + barboterapia', price: 68 },
-      { id: 'economico-cabelo-barba-sobrancelhas', name: 'Cabelo + barba + sobrancelhas', price: 97 },
-      { id: 'economico-premium', name: 'Premium', price: 113 },
+      { id: 'copia-chave-simples', name: 'Cópia de chave simples', description: 'Cópia simples de chave automotiva conforme modelo do cliente.', price: 250, image: '/lojarafa.jpg' },
+      { id: 'copia-chave-canivete', name: 'Cópia de chave canivete', description: 'Montagem e corte de chave canivete com acabamento firme.', price: 450, image: '/lojarafa.jpg' },
+      { id: 'limpeza-de-chaves', name: 'Limpeza de chaves', description: 'Limpeza e revisão básica para melhorar contato e conservação.', price: 50, image: '/lojarafa.jpg' },
+      { id: 'programacao-de-chip', name: 'Programação de chip', description: 'Programação de chip automotivo compatível com o veículo.', price: 200, image: '/lojarafa.jpg' },
+      { id: 'confeccao-chave-telecomando', name: 'Confecção de chave com telecomando', description: 'Chave automotiva com telecomando, corte e configuração inicial.', price: 450, image: '/lojarafa.jpg' },
+      { id: 'troca-de-pilha', name: 'Troca de pilha', description: 'substituição da pilha em chave automotiva no geral.', price: 25, image: '/lojarafa.jpg' },
+      { id: 'troca-de-botao', name: 'Troca de botão', description: 'Troca de botão danificado em carcaça ou telecomando.', price: 50, image: '/lojarafa.jpg' },
+      { id: 'troca-de-segredo-remocao-instalacao', name: 'Troca de segredo para remoção e instalação', description: 'Ajuste ou troca de segredo para chave automotiva.', price: 200, image: '/lojarafa.jpg' },
+      { id: 'troca-carcaca-canivete', name: 'Troca de carcaça canivete', description: 'Substituição da carcaça canivete mantendo componentes aproveitáveis.', price: 200, image: '/lojarafa.jpg' },
+      { id: 'capa-silicone-auto', name: 'Capa de silicone', description: 'Capa de silicone para proteger a chave do carro.', price: 50, image: '/lojarafa.jpg' },
+      { id: 'corte-de-laminas-yale', name: 'Corte de lâminas modelo yale', description: 'Corte de lâmina automotiva para chave nova ou reserva.', price: 70, image: '/lojarafa.jpg' },
+      { id: 'alarme-simples', name: 'Alarme simples', description: 'Configuração básica de alarme automotivo simples.', price: 180, image: '/lojarafa.jpg' },
+      { id: 'troca-de-carcaca-auto', name: 'Troca de carcaça de telecomando', description: 'Troca de carcaça de chave automotiva simples ou telecomando.', price: 70, image: '/lojarafa.jpg' },
+      { id: 'capas-de-silicone-auto', name: 'Capas de silicone', description: 'Capas de telecomando de silicone para proteção e melhor pegada da chave.', price: 50, image: '/lojarafa.jpg' },
+      { id: 'corte-de-laminas-pantografica', name: 'Corte de lâminas modelo pantográfica', description: 'Corte especial de lâminas para chaves pantográficas.', price: 100, image: '/lojarafa.jpg' },
+      { id: 'copia-de-controle', name: 'cópia de controle', description: 'Cópia de controle automotivo com verificação básica de compatibilidade.', price: 80, image: '/lojarafa.jpg' },
+      { id: 'controle-novo', name: 'controle novo', description: 'Controle novo para automação de portão ou veículo.', price: 70, image: '/lojarafa.jpg' },
+      { id: 'manutencao-em-controle', name: 'manutenção em controle', description: 'Diagnóstico e manutenção em controles automotivos.', price: 30, image: '/lojarafa.jpg' },
     ],
-    note: '5% de desconto no PIX ou dinheiro. Válido com agendamento prévio. Não cumulativo.',
+  },
+  {
+    id: 'fechaduras-em-geral',
+    name: 'Fechaduras em geral',
+    description: 'Aberturas, instalações e manutenção para fechaduras, cofres, cadeados e gavetas.',
+    image: '/imagens/secao/fechadurasemgeral_.jpg',
+    services: [
+      { id: 'abertura-de-cofre-so-abertura', name: 'Abertura de cofre (Só abertura)', description: 'Abertura técnica de cofres conforme avaliação do modelo.', price: 200, image: '/lojarafa.jpg' },
+      { id: 'abertura-de-cofres-senha', name: 'Abertura de cofres + descobrir senha', description: 'Abertura de cofres com descoberta de senha e diagnóstico técnico.', price: 300, image: '/lojarafa.jpg' },
+      { id: 'abertura-de-cadeados', name: 'Abertura de cadeados', description: 'Abertura de cadeados comuns quando a chave foi perdida.', price: 50, image: '/lojarafa.jpg' },
+      { id: 'abertura-senha-chave', name: 'Abertura + descobrir senha + confecção de chaves', description: 'Serviço completo com abertura, descoberta de senha e confecção de chaves.', price: 400, image: '/lojarafa.jpg' },
+      { id: 'unificacao-de-segredo', name: 'Unificação de segredo', description: 'Ajuste para uma chave operar mais de uma fechadura compatível.', price: 120, image: '/lojarafa.jpg' },
+      { id: 'manutencao-de-fechadura', name: 'Manutenção de fechadura', description: 'Limpeza, regulagem e reparo básico de fechaduras residenciais ou comerciais.', price: 70, image: '/lojarafa.jpg' },
+      { id: 'instalacao-de-fechadura', name: 'Instalação de fechadura', description: 'Instalação de fechadura nova mediante avaliação da porta e peça.', price: 120, image: '/lojarafa.jpg' },
+    ],
+  },
+  {
+    id: 'portoes',
+    name: 'Portões',
+    description: 'Controle e configuração para portões eletrônicos.',
+    image: '/imagens/secao/portoes.png',
+    services: [
+      { id: 'controle-portao-eletronico', name: 'Controle para portão eletrônico', description: 'Venda, cópia ou configuração de controle para portão eletrônico compatível.', price: 80, image: '/lojarafa.jpg' },
+      { id: 'copia-de-controle-portao', name: 'cópia de controle', description: 'Cópia de controle para portão eletrônico.', price: 80, image: '/lojarafa.jpg' },
+      { id: 'controle-novo-portao', name: 'controle novo', description: 'Controle novo para portão eletrônico.', price: 70, image: '/lojarafa.jpg' },
+      { id: 'pilha-controle-portao', name: 'pilha para controle de portão eletrônico', description: 'Troca de pilha em controle de portão eletrônico.', price: 25, image: '/lojarafa.jpg' },
+      { id: 'manutencao-em-controle-portao', name: 'manutenção em controle', description: 'Diagnóstico e manutenção em controles de portão eletrônico.', price: 30, image: '/lojarafa.jpg' },
+    ],
+  },
+  {
+    id: 'linha-trodat',
+    name: 'Carimbos linha Trodat',
+    description: 'Carimbos automáticos, com preços por cor e modelo.',
+    image: '/imagens/secao/carimbostrodat.png',
+    services: [
+      { id: 'trodat-3911-pastel-verde', name: 'Trodat 3911 - pastel verde', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/pastelverde.png' },
+      { id: 'trodat-3911-pastel-rosa', name: 'Trodat 3911 - pastel rosa', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/pastelrosa.png' },
+      { id: 'trodat-3911-pastel-lilas', name: 'Trodat 3911 - pastel lilas', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/pastelilas.png' },
+      { id: 'trodat-3911-pastel-azul', name: 'Trodat 3911 - pastel azul', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/pastelazul.png' },
+      { id: 'trodat-3911-coral', name: 'Trodat 3911 - coral', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/pastelcoral.png' },
+      { id: 'trodat-3911-branco', name: 'Trodat 3911 - branco', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/branco.png' },
+      { id: 'trodat-3911-azul', name: 'Trodat 3911 - azul', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/azul.png' },
+      { id: 'trodat-3911-vermelho', name: 'Trodat 3911 - vermelho', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/vermelho.png' },
+      { id: 'trodat-3911-preto', name: 'Trodat 3911 - preto', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/preto.png' },
+      { id: 'trodat-3911-rosa', name: 'Trodat 3911 - rosa', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/rosa.png' },
+      { id: 'trodat-3911-verde-maca', name: 'Trodat 3911 - verde maçã', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/verdemaca.png' },
+      { id: 'trodat-3911-amarelo', name: 'Trodat 3911 - amarelo', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/amarelo.png' },
+      { id: 'trodat-3911-lilas', name: 'Trodat 3911 - lilás', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/lilas.png' },
+      { id: 'trodat-3911-laranja-neon', name: 'Trodat 3911 - laranja neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/laranjaneon.png' },
+      { id: 'trodat-3911-rosa-neon', name: 'Trodat 3911 - rosa neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 3,5 x 1,3cm', price: 50, image: '/imagens/carimbos/linha-trodat-3911/rosaneon.png' },
+      { id: 'trodat-4911-preto', name: 'Trodat 4911 - preto', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/preto.png' },
+      { id: 'trodat-4911-verde', name: 'Trodat 4911 - verde', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/verde.png' },
+      { id: 'trodat-4911-branco', name: 'Trodat 4911 - branco', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/branco.png' },
+      { id: 'trodat-4911-cinza', name: 'Trodat 4911 - cinza', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/cinza.png' },
+      { id: 'trodat-4911-branco-fechado', name: 'Trodat 4911 - branco fechado', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/brancofechado.png' },
+      { id: 'trodat-4911-rosa', name: 'Trodat 4911 - rosa', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/rosa.png' },
+      { id: 'trodat-4911-azul', name: 'Trodat 4911 - azul', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/azul.png' },
+      { id: 'trodat-4911-vermelho', name: 'Trodat 4911 - vermelho', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/vermelho.png' },
+      { id: 'trodat-4911-rosa-neon', name: 'Trodat 4911 - rosa neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/rosaneon.png' },
+      { id: 'trodat-4911-laranja-neon', name: 'Trodat 4911 - laranja neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/laranjaneon.png' },
+      { id: 'trodat-4911-verde-limao-neon', name: 'Trodat 4911 - verde limão neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/verdelimaoneon.png' },
+      { id: 'trodat-4911-azul-pastel', name: 'Trodat 4911 - azul pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/azulpastel.png' },
+      { id: 'trodat-4911-creme-pastel', name: 'Trodat 4911 - creme pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/cremepastel.png' },
+      { id: 'trodat-4911-coral-pastel', name: 'Trodat 4911 - coral pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/coralpastel.png' },
+      { id: 'trodat-4911-rosa-pastel', name: 'Trodat 4911 - rosa pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/rosapastel.png' },
+      { id: 'trodat-4911-verde-pastel', name: 'Trodat 4911 - verde pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 60, image: '/imagens/carimbos/linha-trodat-4911/verdepastel.png' },
+      { id: 'trodat-pocket-azul-ceu', name: 'Trodat Pocket Print - azul céu', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/azulceu.png' },
+      { id: 'trodat-pocket-cinza', name: 'Trodat Pocket Print - cinza', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/cinza.png' },
+      { id: 'trodat-pocket-lilaz-preto', name: 'Trodat Pocket Print - lilaz preto', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/lilazpreto.png' },
+      { id: 'trodat-pocket-preto', name: 'Trodat Pocket Print - preto', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/preto.png' },
+      { id: 'trodat-pocket-rosa-preto', name: 'Trodat Pocket Print - rosa preto', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/rosapreto.png' },
+      { id: 'trodat-pocket-rosa-turquesa', name: 'Trodat Pocket Print - rosa turquesa', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/rosaturquesa.png' },
+      { id: 'trodat-pocket-verde-maca', name: 'Trodat Pocket Print - verde maçã', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/verdemaca.png' },
+      { id: 'trodat-pocket-vermelho', name: 'Trodat Pocket Print - vermelho', description: 'CARIMBO POCKET TRODAT. Impressão 3,8 x 1,4 MM', price: 55, image: '/imagens/carimbos/pocket-print/vermelho.png' },
+    ],
+  },
+  {
+    id: 'linha-nykon',
+    name: 'Carimbos linha Nykon',
+    description: 'Carimbos automáticos, com opções por cor e modelo.',
+    image: '/imagens/secao/carimbosnykon.jpg',
+    services: [
+      { id: 'nykon-301-amarelo', name: 'Nykon 301 - amarelo', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/amarelo.png' },
+      { id: 'nykon-301-azul', name: 'Nykon 301 - azul', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/azul.png' },
+      { id: 'nykon-301-azul-bebe', name: 'Nykon 301 - azul bebê', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/azulbebe.png' },
+      { id: 'nykon-301-rosa-bebe', name: 'Nykon 301 - rosa bebê', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/rosabebe.png' },
+      { id: 'nykon-301-lilas', name: 'Nykon 301 - lilás', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/lilas.png' },
+      { id: 'nykon-301-laranja', name: 'Nykon 301 - laranja', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/laranja.png' },
+      { id: 'nykon-301-vermelho', name: 'Nykon 301 - vermelho', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/vermelho.png' },
+      { id: 'nykon-301-cinza', name: 'Nykon 301 - cinza', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/cinza.png' },
+      { id: 'nykon-301-preto', name: 'Nykon 301 - preto', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/preto.png' },
+      { id: 'nykon-301-branco', name: 'Nykon 301 - branco', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/branco.png' },
+      { id: 'nykon-301-verde', name: 'Nykon 301 - verde', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/verde.png' },
+      { id: 'nykon-301-violeta', name: 'Nykon 301 - violeta', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,0 x 2,7 cm', price: 45, image: '/imagens/carimbos/nykon-301/violeta.png' },
+      { id: 'nykon-302-cinza', name: 'Nykon 302 - cinza', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/cinza.png' },
+      { id: 'nykon-302-amarelo', name: 'Nykon 302 - amarelo', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/amarelo.png' },
+      { id: 'nykon-302-reciclado', name: 'Nykon 302 - reciclado', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/reciclado.png' },
+      { id: 'nykon-302-azul', name: 'Nykon 302 - azul', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/azul.png' },
+      { id: 'nykon-302-branco', name: 'Nykon 302 - branco', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/branco.png' },
+      { id: 'nykon-302-preto', name: 'Nykon 302 - preto', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/preto.png' },
+      { id: 'nykon-302-rosa-neon', name: 'Nykon 302 - rosa neon', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/rosaneon.png' },
+      { id: 'nykon-302-verde-limao', name: 'Nykon 302 - verde limão', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/verdelimao.png' },
+      { id: 'nykon-302-azul-bebe', name: 'Nykon 302 - azul bebê', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/azulbebe.png' },
+      { id: 'nykon-302-lilas', name: 'Nykon 302 - lilás', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/lilas.png' },
+      { id: 'nykon-302-verde', name: 'Nykon 302 - verde', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/verde.png' },
+      { id: 'nykon-302-vermelho', name: 'Nykon 302 - vermelho', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/vermelho.png' },
+      { id: 'nykon-302-laranja', name: 'Nykon 302 - laranja', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/laranja.png' },
+      { id: 'nykon-302-amarelo-esverdeado', name: 'Nykon 302 - amarelo esverdeado', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/amarelo.png' },
+      { id: 'nykon-302-violeta', name: 'Nykon 302 - violeta', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/violeta.png' },
+      { id: 'nykon-302-amadeirado', name: 'Nykon 302 - amadeirado', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/amadeirado.png' },
+      { id: 'nykon-302-rosa-pastel', name: 'Nykon 302 - rosa pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/rosapastel.png' },
+      { id: 'nykon-302-verde-pastel', name: 'Nykon 302 - verde pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/verdepastel.png' },
+      { id: 'nykon-302-azul-pastel', name: 'Nykon 302 - azul pastel', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/azulpastel.png' },
+      { id: 'nykon-302-verde-esmeralda', name: 'Nykon 302 - verde esmeralda', description: 'CARIMBO AUTOMÁTICO. Impressão: 1,4 x 3,8 cm', price: 55, image: '/imagens/carimbos/nykon-302/verdeesmeralda.png' },
+    ],
+  },
+  {
+    id: 'diversos',
+    name: 'Diversos',
+    description: 'Carimbos e peças para personalização de uso geral.',
+    services: [
+      { id: 'carimbos-personalizados', name: 'Carimbos personalizados', description: 'para personalizar, entre em contato com a loja', price: 20, image: '/imagens/carimbos/carimbopersonalizado.png' },
+      { id: 'carimbos-para-tecido', name: 'Carimbos para tecido', description: 'kit carimbos para tecidos', price: 100, image: '/imagens/carimbotecido.png' },
+      { id: 'carimbos-de-madeira', name: 'Carimbos de madeira', description: 'carimbos de madeira para marcação artesanal', price: 25, image: '/imagens/carimbos/carimbomadeira.png' },
+    ],
+  },
+  {
+    id: 'tintas-e-almofadas-para-carimbo',
+    name: 'Tintas e almofadas para carimbo',
+    description: 'Tintas e almofadas para uso em carimbos diversos.',
+    services: [
+      { id: 'tinta-azul', name: 'tinta azul', description: 'tinta para carimbo em azul.', price: 10, image: '/imagens/carimbos/tinta-azul.png' },
+      { id: 'tinta-vermelha', name: 'tinta vermelha', description: 'tinta para carimbo em vermelha.', price: 10, image: '/imagens/carimbos/tinta-vermelha.png' },
+      { id: 'tinta-preta', name: 'tinta preta', description: 'tinta para carimbo em preta.', price: 10, image: '/imagens/carimbos/tinta-preta.png' },
+      { id: 'almofada-azul', name: 'almofada azul', description: 'almofada para carimbo em azul.', price: 15, image: '/imagens/carimbos/almofada-azul.png' },
+      { id: 'almofada-vermelha', name: 'almofada vermelha', description: 'almofada para carimbo em vermelha.', price: 15, image: '/imagens/carimbos/almofada-vermelha.png' },
+      { id: 'almofada-preta', name: 'almofada preta', description: 'almofada para carimbo em preta.', price: 15, image: '/imagens/carimbos/almofada-preta.png' },
+    ],
   },
 ];
 
+export const SERVICES = SERVICE_CATEGORIES.flatMap((category) =>
+  category.services.map((service) => ({
+    ...service,
+    categoryId: category.id,
+    categoryName: category.name,
+    duration: SLOT_DURATION_MINUTES,
+  })),
+);
+
+export const BOOKING_SERVICES = SERVICES;
+export const PLAN_TYPES = [];
 export const AVAILABILITY_WINDOW_DAYS = 31;

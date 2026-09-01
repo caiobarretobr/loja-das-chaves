@@ -56,6 +56,16 @@ export function completeAppointment(appointmentId) {
   });
 }
 
+export function rescheduleAppointment(appointmentId, payload) {
+  return apiRequest(adminResourceWithId('agendamentos', appointmentId), {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${getAdminToken()}`,
+    },
+    body: JSON.stringify({ action: 'reschedule', ...payload }),
+  });
+}
+
 export function cancelAppointment(appointmentId) {
   return apiRequest(adminResourceWithId('agendamentos', appointmentId), {
     method: 'DELETE',
@@ -89,6 +99,16 @@ export function completePlanChecklistItem(planId, itemId) {
       Authorization: `Bearer ${getAdminToken()}`,
     },
     body: JSON.stringify({ itemId }),
+  });
+}
+
+export function reschedulePlanAttendance(planId, itemId, payload) {
+  return apiRequest(adminResourceWithId('planos', planId), {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${getAdminToken()}`,
+    },
+    body: JSON.stringify({ action: 'rescheduleAttendance', itemId, ...payload }),
   });
 }
 

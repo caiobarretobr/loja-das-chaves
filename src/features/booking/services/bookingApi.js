@@ -5,9 +5,12 @@ export function fetchAvailability() {
   return apiRequest('/api/disponibilidade');
 }
 
-export function createAppointment(payload) {
+export function createAppointment(payload, idToken = '') {
   return apiRequest('/api/agendamentos', {
     method: 'POST',
+    headers: idToken ? {
+      Authorization: `Bearer ${idToken}`,
+    } : {},
     body: JSON.stringify(payload),
   });
 }

@@ -1,7 +1,7 @@
-import { verifyAuthorizationHeader } from '../_lib/auth.js';
-import { upsertPushSubscription } from '../_lib/firestore.js';
-import { createSubscriptionId, validatePushSubscription } from '../_lib/push.js';
-import { methodNotAllowed, sendJson } from '../_lib/response.js';
+import { verifyAuthorizationHeader } from '../../server/lib/auth.js';
+import { upsertPushSubscription } from '../../server/lib/firestore.js';
+import { createSubscriptionId, validatePushSubscription } from '../../server/lib/push.js';
+import { methodNotAllowed, sendJson } from '../../server/lib/response.js';
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
@@ -28,7 +28,7 @@ export default async function handler(request, response) {
 
     return sendJson(response, 201, {
       id,
-      message: 'Dispositivo adicionado à lista do barbeiro.',
+      message: 'Dispositivo adicionado à lista da loja.',
     });
   } catch (error) {
     return sendJson(response, 500, {

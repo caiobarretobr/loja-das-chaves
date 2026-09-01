@@ -45,7 +45,7 @@ export function formatPhone(value) {
 
 export function isValidPhone(value) {
   const digits = normalizePhone(value);
-  return digits.length === 0 || digits.length === 10 || digits.length === 11;
+  return digits.length === 10 || digits.length === 11;
 }
 
 export function sortAppointments(items) {
