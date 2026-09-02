@@ -1,156 +1,225 @@
-# Barber GS
+# Loja das Chaves
 
-Aplicação de agendamento online para a barbearia Barber GS, 100% em português do Brasil, com frontend em React + Vite, interface em Material UI, autenticação administrativa via funções serverless na Vercel e persistência em Firestore.
+A Loja das Chaves é um sistema web de agendamento e gestão operacional para uma loja especializada em serviços de chaves, fechaduras, portões, amolação, carimbos e acessórios relacionados. O projeto foi pensado para simplificar o atendimento ao cliente, reduzir a necessidade de contato manual e centralizar a gestão da agenda e dos serviços em uma única interface.
 
-URL principal de produção: <https://barbergs.vercel.app/>
+A aplicação combina um frontend moderno em React com uma API serverless na Vercel e integração com Firebase para autenticação e persistência de dados. O objetivo é permitir que clientes agendem o atendimento em poucos passos, enquanto o proprietário da loja acompanha os pedidos, bloqueia datas e revisa a agenda por meio de um painel administrativo.
 
-## Objetivo
+## Visão geral
 
-Automatizar o agendamento manual de uma barbearia pequena, com apenas 1 barbeiro, para que clientes escolham serviço, data e horário sem precisar conversar diretamente pelo WhatsApp.
+O sistema foi criado para resolver um problema comum de pequenos negócios locais: a agenda era organizada de forma manual, com muita conversa por WhatsApp e pouca visibilidade da disponibilidade real. Com a plataforma, a loja consegue:
 
-## Stack
+- disponibilizar serviços em uma página intuitiva e responsiva;
+- permitir que clientes escolham serviço, data e horário;
+- armazenar agendamentos em um banco seguro;
+- bloquear datas ou horários indisponíveis;
+- notificar a loja sobre novos agendamentos;
+- enviar lembretes automáticos para clientes;
+- manter uma área administrativa para gerenciar o fluxo da operação.
 
-- Frontend: React, Vite, Material UI, i18next
-- Backend/API: Vercel Serverless Functions
-- Banco de dados: Firebase Firestore
-- Autenticação de clientes: Firebase Authentication
-- Notificações: Web Push e CallMeBot WhatsApp
-- Hospedagem: Vercel
+## Como funciona
+
+### Fluxo do cliente
+
+1. O cliente acessa a página inicial da loja.
+2. Visualiza os serviços disponíveis e as categorias de atendimento.
+3. Escolhe o tipo de serviço desejado.
+4. Seleciona uma data e um horário disponível na agenda.
+5. Confirma os dados do atendimento.
+6. O agendamento é salvo no sistema.
+7. A loja recebe a notificação e o cliente pode receber lembretes antes do horário.
+
+### Fluxo da loja
+
+1. O responsável acessa o painel administrativo com senha configurada.
+2. Pode visualizar os agendamentos confirmados.
+3. Pode concluir, cancelar ou reabrir horários.
+4. Pode bloquear datas inteiras ou intervalos específicos.
+5. Acompanha relatórios e atividades da agenda.
+
+## Funcionalidades principais
+
+- Agendamento online com interface mobile-first
+- Gestão de disponibilidade por dia e horário
+- Categorias de serviços com preços e descrições
+- Painel administrativo para controle da agenda
+- Bloqueio manual de datas e turnos
+- Notificações por WhatsApp e push web
+- Autenticação de clientes com Firebase
+- Lembretes de atendimento via cron/serverless
+- Relatórios e acompanhamento de atendimentos
+
+## Stack tecnológica
+
+### Frontend
+
+- React 19
+- Vite
+- Material UI (MUI)
+- i18next para internacionalização/idioma do app
+- CSS customizado para layout responsivo
+
+### Backend e infraestrutura
+
+- Vercel Serverless Functions
+- Firebase Firestore para persistência
+- Firebase Authentication para login de clientes
+- Node.js 20+
+
+### Comunicação e automação
+
+- Web Push para notificações no navegador
+- WhatsApp via integração do backend
+- Lógica de lembretes automatizados por endpoint serverless
+
+### Bibliotecas relevantes
+
+- `firebase`
+- `web-push`
+- `jspdf`
+- `react-i18next`
+- `@mui/material`
+
+## Como foi criada
+
+O projeto foi desenvolvido como uma solução específica para uma loja local, com foco em rapidez de uso, simplicidade operacional e acessibilidade em celular. A criação partiu da necessidade de automatizar o processo de agendamento e reduzir a dependência de comunicação manual por mensagens.
+
+A arquitetura foi pensada em camadas:
+
+- frontend responsivo para atender clientes em qualquer dispositivo;
+- API serverless para processar agendamentos e regras de negócio;
+- banco de dados para persistência e consulta de reservas;
+- painel administrativo para controle do dono da loja;
+- notificações para manter a equipe informada em tempo real.
+
+Além disso, a estrutura do projeto foi organizada em features para facilitar manutenção e expansão, como:
+
+- agendamento
+- autenticação de conta
+- administração
+- integração de push
+- serviços compartilhados
+
+## Estrutura do projeto
+
+```text
+.
+├── api/                     # Funções serverless da Vercel
+├── public/                  # Arquivos estáticos públicos
+├── src/                     # Código do frontend React
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   ├── i18n/
+│   └── main.jsx
+├── server/                  # Helpers e utilitários do backend
+├── scripts/                 # Scripts operacionais e utilitários
+├── index.html               # Entrada principal do Vite
+├── vite.config.js           # Configuração do Vite
+├── vercel.json              # Configuração do deploy na Vercel
+├── package.json             # Dependências e scripts do projeto
+├── .nvmrc                   # Versão do Node recomendada
+├── .env.local               # Variáveis locais do ambiente
+├── README.md                # Documentação do projeto
+└── firestore.rules          # Regras de segurança do Firestore
+```
 
 ## Requisitos
 
 - Node.js 20 ou superior
-- Projeto Firebase com Firestore habilitado
-- Firebase Authentication com provedores Google e e-mail/senha habilitados
-- Conta na Vercel
+- Conta no Vercel
+- Projeto Firebase com Firestore e Authentication habilitados
+- Chaves VAPID para notificações push
+- Variáveis de ambiente configuradas corretamente
 
-## Variáveis de Ambiente
+## Variáveis de ambiente
 
-Copie `.env.example` para `.env.local` no desenvolvimento local e configure os valores reais. Não coloque chaves privadas, senhas ou arquivos de service account no repositório.
+O projeto utiliza variáveis de ambiente para conectar frontend, backend e serviços externos. Em desenvolvimento local, normalmente elas são configuradas em `.env.local`.
 
-- `ADMIN_PASSWORD`: senha do barbeiro
-- `ADMIN_SECRET`: chave longa usada para assinar a sessão administrativa
-- `FIREBASE_PROJECT_ID`: ID do projeto no Firebase
-- `FIREBASE_CLIENT_EMAIL`: e-mail da conta de serviço do Firebase
-- `FIREBASE_PRIVATE_KEY`: chave privada da conta de serviço, preservando `\n`
-- `VITE_API_BASE_URL`: opcional para apontar o frontend para outro backend
-- `VITE_FIREBASE_API_KEY`: chave Web do Firebase para autenticação do cliente
-- `VITE_FIREBASE_AUTH_DOMAIN`: domínio Auth do Firebase, como `seu-projeto.firebaseapp.com`
-- `VITE_FIREBASE_PROJECT_ID`: ID público do projeto Firebase usado no frontend
-- `VITE_FIREBASE_APP_ID`: App ID Web do Firebase
-- `VAPID_PUBLIC_KEY`: chave pública para notificações Web Push
-- `VAPID_PRIVATE_KEY`: chave privada para notificações Web Push
-- `VAPID_SUBJECT`: contato/assunto VAPID, como `mailto:contato@barbergs.vercel.app`
-- `BARBERGS_BASE_URL`: URL da produção, recomendado `https://barbergs.vercel.app`
-- `BARBERGS_CHECK_SECRET`: segredo usado pelo GitHub Actions para chamar `/api/reminders/check`
-- `BARBERGS_TIME_ZONE`: fuso horário usado para interpretar datas e horários da agenda, recomendado `America/Recife`
-- `BARBERGS_REMINDER_MINUTES_MIN`: início da janela de lembrete, recomendado `0`
-- `BARBERGS_REMINDER_MINUTES_MAX`: fim da janela de lembrete, recomendado `65`
+Exemplos de variáveis esperadas:
 
-Para gerar as chaves VAPID, rode:
+- `VITE_API_BASE_URL`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_APP_ID`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `ADMIN_PASSWORD`
+- `ADMIN_SECRET`
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+- `BARBERGS_BASE_URL`
+- `BARBERGS_CHECK_SECRET`
+
+Para gerar as chaves VAPID:
 
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-A integração com WhatsApp usa uma URL fixa do CallMeBot no backend:
+## Como rodar localmente
 
-```text
-https://api.callmebot.com/whatsapp.php?phone=558193796278&text=TEST&apikey=7205669
-```
-
-Somente o valor de `text` muda quando o sistema envia avisos de planos ou novos agendamentos.
-
-## Firebase Auth
-
-Para o login de clientes funcionar em produção, confirme no Firebase Console:
-
-- O projeto usado nas variáveis `VITE_FIREBASE_*` é o mesmo projeto do backend, como `barbergs-bcd60`.
-- Existe um Web App registrado em Project settings > General > Your apps.
-- Authentication > Sign-in method tem Google habilitado.
-- Authentication > Sign-in method tem Email/Password habilitado, se o cadastro por e-mail será usado.
-- Authentication > Settings > Authorized domains inclui `barbergs.vercel.app`.
-- Depois de alterar qualquer variável `VITE_FIREBASE_*` na Vercel, faça um novo deploy, porque o Vite embute esses valores no build do navegador.
-
-## Rodando Localmente
+1. Instale as dependências:
 
 ```bash
 npm install
+```
+
+2. Use a versão correta do Node:
+
+```bash
+nvm use 20
+```
+
+3. Inicie o ambiente de desenvolvimento:
+
+```bash
 npm run dev
 ```
 
-Para testar as funções serverless localmente:
+4. Para testar as funções serverless do Vercel localmente:
 
 ```bash
 vercel dev
 ```
 
-## Scripts
+## Scripts disponíveis
 
-- `npm run dev`: inicia o frontend em modo desenvolvimento
-- `npm run build`: gera o build de produção
-- `npm run preview`: serve o build localmente
-- `npm run lint`: executa ESLint no frontend e nas APIs
-- `node scripts/barbergscheck.mjs`: verificador local/manual de notificações e lembretes
+```bash
+npm run dev      # inicia o frontend em modo de desenvolvimento
+npm run build    # gera build de produção
+npm run preview  # serve o build localmente
+npm run lint     # valida o código com ESLint
+```
 
-## Estrutura
+## Deploy
 
-- `src/app`: composição principal da aplicação e tema
-- `src/features`: código organizado por feature, incluindo agendamento, conta e painel administrativo
-- `src/features/shared`: serviços, constantes e utilitários compartilhados
-- `src/i18n`: textos localizados em português do Brasil
-- `api`: funções serverless da Vercel
-- `api/_lib`: helpers compartilhados pelas funções serverless
-- `public`: ativos publicados diretamente pelo Vite
-- `images`: imagens originais preservadas do projeto
-- `markdown-scripts`: PRDs, descrições e histórico de modificações preservados
-- `scripts`: scripts operacionais locais
+O projeto é pensado para ser hospedado na Vercel, com funções serverless e frontend em uma mesma estrutura principal. Para deploy correto, é importante que a versão do Node seja compatível com o Vite e com as dependências do projeto.
 
-## Limite de Funções Serverless
+Recomendação:
 
-O projeto deve permanecer com no máximo 12 funções serverless na Vercel. Hoje há exatamente 12 arquivos deployáveis em `api/`; os helpers em `api/_lib` não contam como endpoints públicos.
+- Node 20.x
+- deploy na Vercel com ambiente de produção configurado
+- variáveis de ambiente adicionadas no painel da Vercel
 
-Endpoints atuais:
+## Benefícios do sistema
 
-- `/api/agendamentos`
-- `/api/bloqueios`
-- `/api/clientes/inscricoes`
-- `/api/clientes/perfil`
-- `/api/disponibilidade`
-- `/api/login`
-- `/api/planos`
-- `/api/push/inscricoes`
-- `/api/push/notificar`
-- `/api/push/status`
-- `/api/relatorios`
-- `/api/reminders/check`
+- melhora o atendimento da loja;
+- reduz perda de tempo na gestão de agenda;
+- facilita a organização dos serviços;
+- melhora a experiência do cliente;
+- centraliza a operação em uma plataforma moderna e escalável.
 
-## Lembretes em Produção
+## Observações finais
 
-A produção não depende de cron local para lembrar clientes. O workflow `.github/workflows/check-reminders.yml` chama `POST /api/reminders/check` a cada 30 minutos.
+Este projeto representa uma solução prática para empresas locais que precisam digitalizar a gestão de agenda e atendimento sem depender de ferramentas complexas ou caras. O foco está em simplicidade, rapidez e eficácia operacional, mantendo a experiência do cliente amigável e a rotina da loja bem organizada.
 
-O endpoint verifica agendamentos e atendimentos de planos que começam em até 65 minutos. Para cada item elegível, ele envia um lembrete ao barbeiro via CallMeBot WhatsApp e tenta enviar Web Push ao cliente quando o cliente autorizou notificações no navegador.
+Se você quiser expandir o projeto no futuro, os próximos passos naturais são:
 
-Configure estes secrets no GitHub:
-
-- `BARBERGS_BASE_URL`: `https://barbergs.vercel.app`
-- `BARBERGS_CHECK_SECRET`: o mesmo valor configurado na Vercel
-
-## Recursos Atuais
-
-- Agendamento responsivo com foco em celular
-- Escolha de serviços e planos mensais
-- Painel do barbeiro para concluir atendimentos
-- Fechamento manual de datas inteiras ou horários específicos, com reativação
-- Notificação opcional do barbeiro via CallMeBot
-- Conta do usuário com Google ou e-mail/senha para assinatura de planos mensais
-- Lista de dispositivos do barbeiro com notificações Web Push para novos agendamentos e lembretes de 1 hora
-- Relatórios mensais de atendimentos concluídos
-
-## Referências do Projeto
-
-- `tech-stack.md`: stack recomendada
-- `best-practices.md`: práticas de arquitetura, segurança e manutenção
-- `markdown-scripts/prd-v1.md`: descrição inicial do produto
-- `markdown-scripts/prd-modified.md` e `markdown-scripts/prdv*.md`: evolução dos requisitos
-- `markdown-scripts/prices`: planos e combos de serviços
+- integrar pagamentos;
+- criar fila de atendimento por categoria;
+- armazenar histórico mais completo de clientes;
+- adicionar mais relatórios e dashboards;
+- melhorar a automação de lembretes e feedbacks.
